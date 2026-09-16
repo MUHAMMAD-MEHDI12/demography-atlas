@@ -63,9 +63,8 @@ export class Glyph {
   private root: SVGGElement;
   private arms: ArmNodes[] = [];
   private labels: SVGGElement;
-  private yearText!: SVGTextElement;
-  private phaseText!: SVGTextElement;
-  private yearShown = "";
+  /** distance from the centre to where the year picker starts, in px */
+  pickerOffset = 0;
   private frame: SVGGElement;
   private unit = 40;
   private top = 0;
@@ -101,12 +100,12 @@ export class Glyph {
   }
 
   /** Lay out for a stage of w x h CSS pixels, keeping clear of a header of height `top`. */
-  resize(w: number, h: number, top = 0, bottomReserve?: number) {
+  resize(w: number, h: number, top = 0, bottomReserve?: number, pickerH = 0) {
     this.svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    const bottom = bottomReserve ?? (w < 620 ? 54 : 34); // legend and timeline
-    const avail = Math.max(h - top - bottom, h * 0.55);
-    // vertical budget: 3.6 units above the centre, 5.2 below (births arm, its title and the year)
-    const u = Math.max(22, Math.min(avail / 8.8, w / 7.4, 120));
+    const bottom = (bottomReserve ?? (w < 620 ? 54 : 34)) + pickerH; // legend and year picker
+    const avail = Math.max(h - top - bottom, h * 0.45);
+    // vertical budget: 3.6 units above the centre, 4.3 below (births arm, its title and the picker gap)
+    const u = Math.max(22, Math.min(avail / 7.9, w / 7.4, 120));
     // shorten the age arms on narrow screens so their tips stay on screen
     const reach = ((w / 2 - 10) / u - 0.45) / 0.866; // centre-to-tip distance that fits
     const step = Math.min(0.2, Math.max(0.11, (reach - 1 - GAP) / AGE_GROUPS));
@@ -117,7 +116,7 @@ export class Glyph {
     this.unit = u;
     this.top = top;
     this.homeX = w / 2;
-    this.homeY = top + 3.6 * u + Math.max(0, avail - 8.8 * u) / 2;
+    this.homeY = top + 3.6 * u + Math.max(0, avail - 7.9 * u) / 2;
     this.setAnchor(this.homeX, this.homeY);
     this.buildStatic();
     this.draw();
@@ -194,27 +193,14 @@ export class Glyph {
         lab.textContent = names[k];
       }
     }
-    // year under the births arm
-    const fertTip = (1 + GAP + FERT_GROUPS * ARMS[2].step) * u;
-    const yg = el("g", { class: "g-year" }, this.labels);
-    this.yearText = el("text", { class: "g-year-num", x: 0, y: fertTip + 1.28 * u, "text-anchor": "middle", "dominant-baseline": "central", "font-size": Math.max(22, Math.min(40, u * 0.62)) }, yg);
-    this.phaseText = el("text", { class: "g-year-phase", x: 0, y: fertTip + 1.28 * u + Math.max(18, Math.min(30, u * 0.45)), "text-anchor": "middle", "dominant-baseline": "central", "font-size": fs }, yg);
-    this.yearShown = "";
+    // the year picker (HTML) sits just below the births title
+    this.pickerOffset = (1 + GAP + FERT_GROUPS * ARMS[2].step) * u + 0.72 * u;
   }
 
   set(primary: Profile, compare: Profile | null) {
     this.data = { pop: [primary.popM, primary.popF], deaths: [primary.deathsM, primary.deathsF], fert: [primary.fert, primary.fert] };
     this.cmp = compare ? { pop: [compare.popM, compare.popF], deaths: [compare.deathsM, compare.deathsF], fert: [compare.fert, compare.fert] } : null;
     this.draw();
-  }
-
-  /** Year and phase label drawn under the chart. */
-  setYear(year: number, projection: boolean) {
-    const key = `${year}${projection}`;
-    if (key === this.yearShown || !this.yearText) return;
-    this.yearShown = key;
-    this.yearText.textContent = String(year);
-    this.phaseText.textContent = projection ? "UN projection" : "UN estimate";
   }
 
   setProjection(on: boolean) {
@@ -259,6 +245,15 @@ export class Glyph {
     r.setAttribute("width", w.toFixed(2));
     r.setAttribute("height", h.toFixed(2));
     r.setAttribute("rx", Math.min(h / 2, w / 2).toFixed(2));
+  }
+
+  /** True when the pointer is inside the triangle, where the chart can be grabbed. */
+  hitCore(clientX: number, clientY: number): boolean {
+    const box = this.svg.getBoundingClientRect();
+    const x = (clientX - box.left - this.cx) / this.unit;
+    const y = (clientY - box.top - this.cy) / this.unit;
+    // triangle with vertices (0,-2), (-√3,1), (√3,1): the upper sides are y = -2 + √3·|x|
+    return y <= 1 && y >= -2 + SQ3 * Math.abs(x);
   }
 
   /** Map a pointer position to an arm and age group. */

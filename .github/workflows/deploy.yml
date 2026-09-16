@@ -19,6 +19,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Rebuild the data file from the official UN WPP 2024 source files on every deploy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pipeline/requirements.txt
+      - name: Cache UN source files
+        uses: actions/cache@v4
+        with:
+          path: pipeline/.cache
+          key: wpp2024-source-v1
+      - run: pip install -r pipeline/requirements.txt
+      - name: Build data from UN World Population Prospects 2024
+        run: python pipeline/build_data.py
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20

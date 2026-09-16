@@ -223,7 +223,7 @@ def main() -> None:
     annual = np.stack([pop_tot, births, deaths_tot, net_mig, pop_change, growth], axis=0).astype("<f8")
     body = header + mj + pad + annual.tobytes() + delta.tobytes()
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_bytes(gzip.compress(body, 9))
+    args.out.write_bytes(gzip.compress(body, 9, mtime=0))
     print(f"wrote {args.out} ({args.out.stat().st_size / 1e6:.2f} MB gzip, {len(body) / 1e6:.1f} MB raw)")
 
 

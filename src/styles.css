@@ -124,7 +124,7 @@ button {
 .recenter {
   position: absolute;
   right: 12px;
-  bottom: 104px;
+  bottom: 34px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -279,6 +279,17 @@ button {
   font-style: italic;
   fill: var(--ink);
 }
+.g-age {
+  paint-order: stroke;
+  stroke: var(--ocean);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.g-title {
+  font-family: var(--serif);
+  font-style: italic;
+  fill: var(--ink);
+}
 .g-year-num {
   fill: var(--ink);
   font-weight: 600;
@@ -301,131 +312,122 @@ button {
   stroke: var(--land);
 }
 
-/* ---------- timeline under the map --------------------------------------------- */
-.timeline {
+/* ---------- year picker under the chart ---------------------------------------- */
+.year-picker {
   position: absolute;
+  top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: min(340px, calc(100% - 16px));
+  cursor: default;
+  touch-action: none;
+  will-change: transform;
+}
+.year-picker:focus-visible {
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+.yp-label {
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 1.1;
+  paint-order: stroke;
+  text-shadow: 0 0 4px var(--ocean), 0 0 8px var(--ocean);
+}
+.yp-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 6px 18px max(8px, env(safe-area-inset-bottom)) 12px;
-  background: color-mix(in srgb, var(--panel) 90%, transparent);
-  border-top: 1px solid var(--rule);
-  cursor: default;
-  touch-action: pan-x;
+  gap: 8px;
+  width: 100%;
+  padding-right: 42px; /* balances the play button so the selected year sits under the chart */
 }
-.play {
+.yp-play {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
   border: 0;
+  border-radius: 50%;
   background: var(--ink);
   color: var(--panel);
 }
-.play path {
+.yp-play path {
   fill: currentColor;
 }
-.slider {
+.yp-strip {
   position: relative;
   flex: 1;
-  min-width: 0;
-  padding-top: 22px;
+  height: 38px;
+  overflow: hidden;
+  cursor: grab;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
 }
-.year-bubble {
-  --pos: 0.49;
+.year-picker.is-dragging .yp-strip {
+  cursor: grabbing;
+}
+.yp-track {
   position: absolute;
   top: 0;
-  left: calc(12px + var(--pos) * (100% - 24px));
-  transform: translateX(-50%);
-  padding: 1px 8px;
-  border-radius: 10px;
-  background: var(--ink);
-  color: var(--panel);
-  font-size: 13px;
+  left: 50%;
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+.yp-year {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 100%;
+  font-size: 15px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  line-height: 1.4;
-  pointer-events: none;
+  color: var(--ink-2);
+  opacity: 0.55;
+  user-select: none;
 }
-.year-bubble.is-proj {
-  background: var(--ink-2);
+.yp-year.is-proj {
+  font-style: italic;
 }
-.slider input {
-  --split: 49%;
-  display: block;
-  width: 100%;
-  height: 26px;
-  margin: 0;
-  background: transparent;
-  -webkit-appearance: none;
-  appearance: none;
-  cursor: pointer;
+.yp-year.is-active {
+  color: var(--ink);
+  opacity: 1;
+  font-size: 17px;
 }
-.slider input::-webkit-slider-runnable-track {
-  height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(90deg, var(--ink) 0 var(--split), transparent var(--split)),
-    repeating-linear-gradient(-45deg, var(--ink-2) 0 1.5px, var(--rule) 1.5px 4px);
+.yp-box {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 50%;
+  width: 60px;
+  transform: translateX(-50%);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  box-shadow: 0 0 0 1px var(--border);
+  z-index: -1;
 }
-.slider input::-moz-range-track {
-  height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(90deg, var(--ink) 0 var(--split), transparent var(--split)),
-    repeating-linear-gradient(-45deg, var(--ink-2) 0 1.5px, var(--rule) 1.5px 4px);
+.yp-strip {
+  isolation: isolate;
 }
-.slider input::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 22px;
-  height: 22px;
-  margin-top: -8px;
-  border-radius: 50%;
-  background: var(--highlight);
-  border: 3px solid var(--panel);
-  box-shadow: 0 0 0 1.5px var(--ink);
+.yp-phase {
+  font-size: 12px;
+  color: var(--ink-2);
+  text-shadow: 0 0 4px var(--ocean);
 }
-.slider input::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--highlight);
-  border: 3px solid var(--panel);
-  box-shadow: 0 0 0 1.5px var(--ink);
-}
-.slider-scale {
-  position: relative;
-  height: 16px;
-  margin: 0 12px;
+.yp-hint {
   font-size: 11.5px;
   color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 4px var(--ocean), 0 0 6px var(--ocean);
 }
-.slider-scale span {
-  position: absolute;
-  top: 0;
-  transform: translateX(-50%);
+.stage.is-over-chart {
+  cursor: grab;
 }
-.slider-scale span:nth-child(1) { left: 0; }
-.slider-scale span:nth-child(2) { left: 16.667%; }
-.slider-scale span:nth-child(3) { left: 33.333%; }
-.slider-scale span:nth-child(4) { left: 48.667%; }
-.slider-scale span:nth-child(5) { left: 66.667%; }
-.slider-scale span:nth-child(6) { left: 83.333%; }
-.slider-scale span:nth-child(7) { left: 100%; }
-.slider-scale .is-split {
-  color: var(--ink);
-  font-weight: 600;
-}
-@media (max-width: 620px) {
-  .slider-scale span:nth-child(2),
-  .slider-scale span:nth-child(6),
-  .slider-scale span:nth-child(4) {
-    display: none;
-  }
+.stage.is-dragging-chart {
+  cursor: grabbing;
 }
 
 /* ---------- legend, tooltip, status ------------------------------------------ */
@@ -433,7 +435,7 @@ button {
   position: absolute;
   left: 12px;
   right: 12px;
-  bottom: 78px;
+  bottom: 8px;
   display: flex;
   flex-wrap: wrap;
   gap: 4px 14px;
@@ -452,7 +454,7 @@ button {
 }
 @media (max-width: 620px) {
   .recenter {
-    bottom: 128px;
+    bottom: 56px;
   }
 }
 @media (max-width: 620px) {
@@ -1159,7 +1161,16 @@ a:hover {
   vertical-align: top;
   font-size: 13.5px;
 }
-.lab-affiliation {
+.contact-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0 !important;
+  list-style: none;
+}
+.contact-list strong {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--ink-2);
 }
 .cite {

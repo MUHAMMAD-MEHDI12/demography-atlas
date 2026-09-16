@@ -115,7 +115,8 @@ export class Dataset {
   private constructor(buf: ArrayBuffer) {
     const view = new DataView(buf);
     const magic = String.fromCharCode(...new Uint8Array(buf, 0, 4));
-    if (magic !== "WPP6") throw new Error("The data file has an unexpected format.");
+    if (magic !== "WPP6" && magic !== "WPP5") throw new Error("The data file has an unexpected format.");
+    const wide = magic === "WPP6"; // WPP6 stores the annual series as float64, WPP5 as float32
     const nLoc = view.getUint16(4, true);
     this.nLoc = nLoc;
     this.nYears = view.getUint16(6, true);
@@ -123,9 +124,11 @@ export class Dataset {
     const metaLen = view.getUint32(10, true);
     this.meta = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 14, metaLen)));
     let off = 14 + metaLen;
-    off += (8 - (off % 8)) % 8;
-    this.annual = new Float64Array(buf, off, SERIES.length * nLoc * this.nYears);
-    off += SERIES.length * nLoc * this.nYears * 8;
+    const align = wide ? 8 : 4;
+    off += (align - (off % align)) % align;
+    const count = SERIES.length * nLoc * this.nYears;
+    this.annual = wide ? new Float64Array(buf, off, count) : Float64Array.from(new Float32Array(buf, off, count));
+    off += count * align;
     this.rec = new Uint16Array(buf.slice(off, off + nLoc * this.nYears * this.nRec * 2));
 
     // undo year-delta encoding in place

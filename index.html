@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content="How every country's age structure, deaths and births change from 1950 to 2100, using UN World Population Prospects 2024." />
-    <title>Demography Atlas</title>
+    <title>Demography Atlas | GeoScape Analytics Lab</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -35,19 +35,18 @@
           <li><i class="sw sw-f"></i>Female</li>
           <li><i class="sw sw-p"></i>Projection</li>
           <li class="legend-cmp" id="legend-cmp" hidden><i class="sw sw-c"></i><span id="legend-cmp-name"></span></li>
-          <li class="hint"><span class="hint-long">Drag to move, scroll or pinch to zoom, double-tap a country to open it</span><span class="hint-short">Drag, pinch, double-tap a country</span></li>
+          <li class="hint"><span class="hint-long">Grab the triangle and drop it on any country, or double-click a country. Drag the map to move it.</span><span class="hint-short">Drag the triangle onto a country</span></li>
         </ul>
-        <div class="timeline" id="timeline">
-          <button type="button" class="play" id="play" aria-label="Play from this year">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path id="play-icon" d="M7 4.5v15l12.5-7.5z" /></svg>
-          </button>
-          <div class="slider">
-            <output class="year-bubble" id="year" for="slider">2023</output>
-            <input type="range" id="slider" min="1950" max="2100" step="1" value="2023" aria-label="Year" />
-            <div class="slider-scale" aria-hidden="true">
-              <span>1950</span><span>1975</span><span>2000</span><span class="is-split">2023</span><span>2050</span><span>2075</span><span>2100</span>
-            </div>
+        <div class="year-picker" id="year-picker" role="slider" tabindex="0" aria-label="Year">
+          <span class="yp-label">Year</span>
+          <div class="yp-row">
+            <button type="button" class="yp-play" aria-label="Play from this year">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" /></svg>
+            </button>
+            <div class="yp-strip"><div class="yp-track"></div><span class="yp-box" aria-hidden="true"></span></div>
           </div>
+          <span class="yp-phase">UN estimate</span>
+          <span class="yp-hint"><span class="hint-long">Slide the years or use the arrow keys</span><span class="hint-short">Slide the years to change</span></span>
         </div>
         <p class="status" id="status">Loading UN population data</p>
       </main>
@@ -111,14 +110,13 @@
             at which ages people die, and how old mothers are when children are born.
           </p>
           <p>
-            Pick a place from the list or double-tap it on the map, move through the years with the slider or the play button,
-            and use Compare to overlay a second place. Years up to 2023 are UN estimates; later years are UN projections.
+            Grab the triangle and drop it on any country, double-click a country, or pick one from the list. Slide the years under
+            the chart or press play, and use Compare to overlay a second place. Years up to 2023 are UN estimates; later years are UN projections.
           </p>
         </section>
 
         <section id="lab" class="site-block" hidden>
           <h2 id="lab-name">About the lab</h2>
-          <p class="lab-affiliation" id="lab-affiliation" hidden></p>
           <p id="lab-intro" hidden></p>
           <p id="lab-website" hidden></p>
         </section>
@@ -173,7 +171,7 @@
         <section id="contact" class="site-block">
           <h2>Contact</h2>
           <p id="contact-intro">Questions, corrections or ideas for this atlas are welcome.</p>
-          <ul class="link-list" id="contact-list"></ul>
+          <ul class="contact-list" id="contact-list"></ul>
         </section>
       </div>
       <p class="site-foot" id="site-foot"></p>

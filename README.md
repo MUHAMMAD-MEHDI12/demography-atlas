@@ -17,8 +17,9 @@ Years up to 2023 are UN estimates. Later years are the UN median projection and 
 - Compare mode: overlay a second place as outlines
 - Median age, births per woman, life expectancy and old-age dependency for every year
 - Explore the map freely: drag to move it (with momentum), scroll or pinch to zoom, double-click or double-tap any country to open its profile
+- Grab the triangle and drop it on any country: the chart follows the cursor and switches country as it passes over them
 - Double-click a country and the chart moves to it while the map stays still; "Center on …" centres the map on it
-- Year slider and play button under the map
+- Year picker under the chart: slide the years, tap one, or use the arrow keys; play button beside it
 - Smooth transitions between years, places and comparisons
 - The year and whether it is a UN estimate or projection are shown under the chart
 - Total population chart for 1950–2100, with the comparison place overlaid
@@ -45,9 +46,13 @@ All figures come from the **United Nations World Population Prospects 2024** (UN
 
 Checks run by the pipeline: mid-year totals match the UN published figures (China 2023: 1,422,585 thousand; world 2023: 8,091,735 thousand), and derived deaths match official total deaths within a median of 0.2%.
 
-## Add your lab and contact details
+## Lab and contact details
 
-Open `src/site.ts` and fill in the lab name, introduction, email and links. Empty fields are hidden on the website.
+Lab and contact information shown on the site lives in `src/site.ts`.
+
+## Data build on deploy
+
+The GitHub Actions workflow runs `pipeline/build_data.py` before building the site, so the data file is always rebuilt from the official UN WPP 2024 source files, and the build stops if the population checks fail.
 
 ## Project structure
 
@@ -59,6 +64,7 @@ src/data.ts                loads the data pack, interpolates between years
 src/glyph.ts               draws the three-arm chart and the year label (SVG)
 src/charts.ts              population trend and 5-year change charts
 src/details.ts             detailed statistics dialog and CSV export
+src/yearpicker.ts          year picker under the chart
 src/site.ts                lab and contact details (edit this)
 src/map.ts                 draws the map; drag, inertia, zoom and fly-to (Canvas, d3-geo)
 src/main.ts                app state, controls, search, comparison, links
@@ -100,6 +106,6 @@ npm run geo                          # rebuilds the map file
 ## Credits
 
 Data: United Nations, Department of Economic and Social Affairs, Population Division (2024). World Population Prospects 2024. CC BY 3.0 IGO.
-Boundaries: Natural Earth via world-atlas. Inspired by demographic profile maps shared by Benjamin Niedermann.
+Boundaries: Natural Earth via world-atlas. Built by GeoScape Analytics Lab (GSAL), Lahore. Inspired by demographic profile maps shared by Benjamin Niedermann.
 
 Code: MIT License.

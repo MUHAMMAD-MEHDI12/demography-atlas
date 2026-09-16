@@ -155,6 +155,11 @@ export class WorldMap {
     return !!xy && xy[0] > m && xy[0] < this.w - m && xy[1] > m && xy[1] < this.h - m;
   }
 
+  /** Redraw and report the chart position again. */
+  refresh() {
+    this.requestFrame();
+  }
+
   /** Fly back so the selected place sits under the glyph again. */
   recenter(animate = true) {
     this.home = this.viewFor(this.selectedCode);
