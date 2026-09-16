@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="How every country's age structure, deaths and births change from 1950 to 2100, using UN World Population Prospects 2024." />
+    <title>Demography Atlas</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@1,400;1,500&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div class="app">
+      <main class="stage" id="stage">
+        <canvas id="map" aria-hidden="true"></canvas>
+        <svg id="glyph" role="img" aria-labelledby="glyph-desc"><desc id="glyph-desc">Population, deaths and births by age for the selected place and year.</desc></svg>
+        <header class="head">
+          <button class="place" id="place-btn" type="button" aria-haspopup="dialog">
+            <span class="place-name" id="place-name">Loading</span>
+            <span class="place-region" id="place-region">World Population Prospects 2024</span>
+          </button>
+          <div class="compare" id="compare">
+            <button type="button" class="compare-btn" id="compare-btn" aria-haspopup="dialog">Compare</button>
+            <button type="button" class="compare-clear" id="compare-clear" aria-label="Stop comparing" hidden>×</button>
+          </div>
+        </header>
+        <div class="tooltip" id="tooltip" role="status" hidden></div>
+        <ul class="legend" aria-label="Legend">
+          <li><i class="sw sw-m"></i>Male</li>
+          <li><i class="sw sw-f"></i>Female</li>
+          <li><i class="sw sw-p"></i>Projection</li>
+          <li class="legend-cmp" id="legend-cmp" hidden><i class="sw sw-c"></i><span id="legend-cmp-name"></span></li>
+        </ul>
+        <p class="status" id="status">Loading UN population data</p>
+      </main>
+
+      <section class="dock" aria-label="Year and indicators">
+        <div class="time">
+          <button type="button" class="play" id="play" aria-label="Play from this year">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path id="play-icon" d="M7 4.5v15l12.5-7.5z" /></svg>
+          </button>
+          <output class="year" id="year" for="slider">2023</output>
+          <span class="phase" id="phase">Estimate</span>
+        </div>
+        <div class="slider">
+          <input type="range" id="slider" min="1950" max="2100" step="1" value="2023" aria-label="Year" />
+          <div class="slider-scale" aria-hidden="true"><span>1950</span><span>2000</span><span>2050</span><span>2100</span></div>
+        </div>
+
+        <dl class="stats" id="stats">
+          <div><dt>Population</dt><dd data-k="population"></dd></div>
+          <div><dt>Median age</dt><dd data-k="medianAge"></dd></div>
+          <div><dt>Births per woman</dt><dd data-k="tfr"></dd></div>
+          <div><dt>Life expectancy at birth</dt><dd data-k="e0"></dd></div>
+          <div class="wide"><dt>People 65+ for every 100 aged 15–64</dt><dd data-k="oldAge"></dd></div>
+        </dl>
+
+        <p class="source">
+          Data: United Nations, DESA, Population Division, World Population Prospects 2024, CC BY 3.0 IGO.
+          Years after 2023 are the median projection. Deaths by age are computed from WPP death rates and mid-year population.
+        </p>
+      </section>
+    </div>
+
+    <dialog class="picker" id="picker" aria-labelledby="picker-title">
+      <form method="dialog" class="picker-head">
+        <h2 id="picker-title">Choose a place</h2>
+        <button class="picker-close" aria-label="Close">×</button>
+      </form>
+      <input type="search" id="picker-input" placeholder="Search 237 countries and areas" autocomplete="off" />
+      <ul class="picker-list" id="picker-list"></ul>
+    </dialog>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

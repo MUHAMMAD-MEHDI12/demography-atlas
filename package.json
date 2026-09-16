@@ -1,0 +1,28 @@
+{
+  "name": "demography-atlas",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Interactive demographic profiles of every country, 1950-2100, from UN World Population Prospects 2024",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "geo": "node scripts/build-geo.mjs",
+    "data": "python pipeline/build_data.py",
+    "build:single": "npm run build && node scripts/make-standalone.mjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "d3-geo": "^3.1.1",
+    "topojson-client": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/d3-geo": "^3.1.1",
+    "@types/topojson-client": "^3.1.5",
+    "@types/topojson-specification": "^1.0.5",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.0",
+    "world-atlas": "^2.0.2"
+  }
+}
