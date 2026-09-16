@@ -136,7 +136,7 @@ class App {
     $("compare-clear").hidden = !this.compare;
     $("legend-cmp").hidden = !this.compare;
     $("legend-cmp-name").textContent = this.compare?.name ?? "";
-    document.title = `${p.name}, demographic profile | Demography Atlas | GSAL`;
+    document.title = "HumanScape";
     this.map.select(p.code, this.compare?.code ?? null, (code) => this.members(code), animate && !reducedMotion.matches, stay);
     this.statsKey = "";
     this.kick();
