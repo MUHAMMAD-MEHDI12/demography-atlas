@@ -11,7 +11,8 @@ Source: the `wpp2024` data package maintained with the UN Population Division
   - percentASFR1dt            : percentage age-specific fertility rates
   - tfr1dt / tfrproj1dt       : total fertility rate
   - e01dt / e0proj1dt         : life expectancy at birth
-  - misc1dt                   : official total deaths (used to validate)
+  - misc1dt / miscproj1dt     : births, deaths, population change, growth rate
+  - mig1dt / migproj1dt       : net number of migrants
 
 Deaths by age are derived as  mx(age, sex, year) * population(age, sex, year),
 which follows the definition of the central death rate (deaths / exposure).
@@ -157,6 +158,24 @@ def main() -> None:
         df = pd.concat([src.rda(n, ["country_code", "year", col]) for n in names])
         return grid(df[df.country_code.isin(codes) & (df.year >= YEAR0)], col)
 
+    print("official annual components")
+    births = series(["misc1dt", "miscproj1dt"], "births")
+    deaths_tot = series(["misc1dt", "miscproj1dt"], "deaths")
+    pop_change = series(["misc1dt", "miscproj1dt"], "PopChange")
+    growth = series(["misc1dt", "miscproj1dt"], "growthrate")
+    net_mig = series(["mig1dt", "migproj1dt"], "mig")
+    resid = np.nanmax(np.abs(births - deaths_tot + net_mig - pop_change))
+    print(f"  births - deaths + net migration vs population change: max difference {resid:.3f} thousand")
+
+    # spot checks against figures published by the UN (1 July population, thousands)
+    published = {(156, 2023): 1422585, (356, 2023): 1438070, (900, 2023): 8091735, (586, 2023): 247504}
+    for (code, year), expected in published.items():
+        got = pop_tot[idx[code], year - YEAR0]
+        status = "ok" if abs(got - expected) < 1 else "MISMATCH"
+        print(f"  check {code} {year}: {got:,.0f} vs published {expected:,} -> {status}")
+        if status != "ok":
+            raise SystemExit("Population check failed; the source data or conversion has changed.")
+
     tfr = series(["tfr1dt", "tfrproj1dt"], "tfr")
     e0 = series(["e01dt", "e0proj1dt"], "e0B")
 
@@ -183,6 +202,7 @@ def main() -> None:
         "yearStart": YEAR0, "yearEnd": YEAR1, "lastEstimate": LAST_ESTIMATE,
         "ages": [f"{a}-{a + 4}" for a in range(0, 95, 5)] + ["95+"],
         "fertAges": FERT_LABELS,
+        "annual": ["population (1 July)", "births", "deaths", "netMigration", "popChange", "growthRate (%)"],
         "layout": ["popM:20", "popF:20", "deathsM:20", "deathsF:20", "fert:7", "tfr:1", "e0:1", "medianAge:1"],
         "scales": {"shares": 100, "tfr": 100, "e0": 10, "medianAge": 10},
         "missing": MISSING,
@@ -190,9 +210,11 @@ def main() -> None:
                       for r in locs.itertuples()],
     }
     mj = json.dumps(meta, ensure_ascii=False, separators=(",", ":")).encode()
-    header = b"WPP4" + struct.pack("<HHHI", n_loc, n_year, record.shape[2], len(mj))
+    header = b"WPP5" + struct.pack("<HHHI", n_loc, n_year, record.shape[2], len(mj))
     pad = b"\0" * ((-(len(header) + len(mj))) % 4)  # align binary section to 4 bytes
-    body = header + mj + pad + np.nan_to_num(pop_tot, nan=-1).astype("<f4").tobytes() + delta.tobytes()
+    # six float32 series per location-year (thousands; growth in %), NaN where missing
+    annual = np.stack([pop_tot, births, deaths_tot, net_mig, pop_change, growth], axis=0).astype("<f4")
+    body = header + mj + pad + annual.tobytes() + delta.tobytes()
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_bytes(gzip.compress(body, 9))
     print(f"wrote {args.out} ({args.out.stat().st_size / 1e6:.2f} MB gzip, {len(body) / 1e6:.1f} MB raw)")

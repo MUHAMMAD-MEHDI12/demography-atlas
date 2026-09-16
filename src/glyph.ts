@@ -63,9 +63,16 @@ export class Glyph {
   private root: SVGGElement;
   private arms: ArmNodes[] = [];
   private labels: SVGGElement;
+  private yearText!: SVGTextElement;
+  private phaseText!: SVGTextElement;
+  private yearShown = "";
   private frame: SVGGElement;
   private unit = 40;
   private top = 0;
+  /** where the glyph sits when the map is centred on the selection */
+  homeX = 0;
+  homeY = 0;
+  /** where the glyph is drawn now; follows the selected place while the map moves */
   cx = 0;
   cy = 0;
   private data: Record<Key, [Float64Array, Float64Array]> | null = null;
@@ -96,10 +103,10 @@ export class Glyph {
   /** Lay out for a stage of w x h CSS pixels, keeping clear of a header of height `top`. */
   resize(w: number, h: number, top = 0) {
     this.svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    const bottom = 34; // legend
+    const bottom = w < 620 ? 54 : 34; // legend (two lines on phones)
     const avail = Math.max(h - top - bottom, h * 0.55);
-    // vertical budget: 3.6 units above the centre, 4.1 below (births arm and its title)
-    const u = Math.max(22, Math.min(avail / 7.7, w / 7.4, 130));
+    // vertical budget: 3.6 units above the centre, 5.2 below (births arm, its title and the year)
+    const u = Math.max(22, Math.min(avail / 8.8, w / 7.4, 120));
     // shorten the age arms on narrow screens so their tips stay on screen
     const reach = ((w / 2 - 10) / u - 0.45) / 0.866; // centre-to-tip distance that fits
     const step = Math.min(0.2, Math.max(0.11, (reach - 1 - GAP) / AGE_GROUPS));
@@ -109,11 +116,19 @@ export class Glyph {
     }
     this.unit = u;
     this.top = top;
-    this.cx = w / 2;
-    this.cy = top + 3.6 * u + Math.max(0, avail - 7.7 * u) / 2;
-    this.root.setAttribute("transform", `translate(${this.cx},${this.cy})`);
+    this.homeX = w / 2;
+    this.homeY = top + 3.6 * u + Math.max(0, avail - 8.8 * u) / 2;
+    this.setAnchor(this.homeX, this.homeY);
     this.buildStatic();
     this.draw();
+  }
+
+  /** Move the whole glyph (GPU-friendly transform, no re-layout). */
+  setAnchor(x: number, y: number) {
+    if (Math.abs(x - this.cx) < 0.05 && Math.abs(y - this.cy) < 0.05 && this.root.hasAttribute("transform")) return;
+    this.cx = x;
+    this.cy = y;
+    this.root.setAttribute("transform", `translate(${x.toFixed(1)},${y.toFixed(1)})`);
   }
 
   get lensRadius() {
@@ -158,8 +173,8 @@ export class Glyph {
         Object.entries({ x: 0, y: tip + 0.42 * u, "text-anchor": "middle" }).forEach(([k, v]) => title.setAttribute(k, String(v)));
       } else {
         const side = Math.sign(r); // -1 left arm, 1 right arm
-        const tx = side * Math.min(Math.abs(tip * Math.sin(rr)) - 0.2 * u, this.cx - 8);
-        Object.entries({ x: tx, y: Math.max(-tip * Math.cos(rr) - 0.62 * u, this.top - this.cy + fs), "text-anchor": side < 0 ? "start" : "end" }).forEach(([k, v]) => title.setAttribute(k, String(v)));
+        const tx = side * Math.min(Math.abs(tip * Math.sin(rr)) - 0.2 * u, this.homeX - 8);
+        Object.entries({ x: tx, y: Math.max(-tip * Math.cos(rr) - 0.62 * u, this.top - this.homeY + fs), "text-anchor": side < 0 ? "start" : "end" }).forEach(([k, v]) => title.setAttribute(k, String(v)));
       }
       if (!spec.symmetric) {
         text("g-sex g-sex-m", -SQ3 * u - 0.12 * u, -u, fs * 0.9, "male", "end");
@@ -179,12 +194,27 @@ export class Glyph {
         lab.textContent = names[k];
       }
     }
+    // year under the births arm
+    const fertTip = (1 + GAP + FERT_GROUPS * ARMS[2].step) * u;
+    const yg = el("g", { class: "g-year" }, this.labels);
+    this.yearText = el("text", { class: "g-year-num", x: 0, y: fertTip + 1.28 * u, "text-anchor": "middle", "dominant-baseline": "central", "font-size": Math.max(22, Math.min(40, u * 0.62)) }, yg);
+    this.phaseText = el("text", { class: "g-year-phase", x: 0, y: fertTip + 1.28 * u + Math.max(18, Math.min(30, u * 0.45)), "text-anchor": "middle", "dominant-baseline": "central", "font-size": fs }, yg);
+    this.yearShown = "";
   }
 
   set(primary: Profile, compare: Profile | null) {
     this.data = { pop: [primary.popM, primary.popF], deaths: [primary.deathsM, primary.deathsF], fert: [primary.fert, primary.fert] };
     this.cmp = compare ? { pop: [compare.popM, compare.popF], deaths: [compare.deathsM, compare.deathsF], fert: [compare.fert, compare.fert] } : null;
     this.draw();
+  }
+
+  /** Year and phase label drawn under the chart. */
+  setYear(year: number, projection: boolean) {
+    const key = `${year}${projection}`;
+    if (key === this.yearShown || !this.yearText) return;
+    this.yearShown = key;
+    this.yearText.textContent = String(year);
+    this.phaseText.textContent = projection ? "UN projection" : "UN estimate";
   }
 
   setProjection(on: boolean) {
@@ -212,20 +242,23 @@ export class Glyph {
           this.bar(arm.cLeft[i], -1, cl * k, y, h);
           this.bar(arm.cRight[i], 1, cr * k, y, h);
         } else {
-          arm.cLeft[i].setAttribute("width", "0");
-          arm.cRight[i].setAttribute("width", "0");
+          this.bar(arm.cLeft[i], -1, 0, y, h);
+          this.bar(arm.cRight[i], 1, 0, y, h);
         }
       }
     }
   }
 
-  private bar(r: SVGRectElement, side: number, len: number, y: number, h: number) {
+  private bar(r: SVGRectElement & { _k?: string }, side: number, len: number, y: number, h: number) {
     const w = Number.isFinite(len) ? Math.max(len, 0) : 0;
-    r.setAttribute("x", String(side < 0 ? -w : 0));
-    r.setAttribute("y", String(y));
-    r.setAttribute("width", String(w));
-    r.setAttribute("height", String(h));
-    r.setAttribute("rx", String(Math.min(h / 2, w / 2)));
+    const key = `${w.toFixed(2)}|${y.toFixed(2)}|${h.toFixed(2)}`;
+    if (r._k === key) return; // skip DOM writes when nothing changed
+    r._k = key;
+    r.setAttribute("x", (side < 0 ? -w : 0).toFixed(2));
+    r.setAttribute("y", y.toFixed(2));
+    r.setAttribute("width", w.toFixed(2));
+    r.setAttribute("height", h.toFixed(2));
+    r.setAttribute("rx", Math.min(h / 2, w / 2).toFixed(2));
   }
 
   /** Map a pointer position to an arm and age group. */

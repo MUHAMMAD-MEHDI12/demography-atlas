@@ -1,8 +1,10 @@
 // Loads and decodes the WPP 2024 data pack produced by pipeline/build_data.py.
 //
 // Layout (little endian):
-//   "WPP4" | uint16 nLoc | uint16 nYears | uint16 nRecord | uint32 metaLength | meta JSON | pad to 4
-//   float32[nLoc * nYears]              total population, thousands (1 July)
+//   "WPP5" | uint16 nLoc | uint16 nYears | uint16 nRecord | uint32 metaLength | meta JSON | pad to 4
+//   float32[6 * nLoc * nYears]          official annual series, in this order:
+//                                        population (1 July), births, deaths, net migration,
+//                                        population change (thousands) and growth rate (%)
 //   uint16[nLoc * nYears * nRecord]     year-delta-encoded record, see meta.layout
 
 export interface Place {
@@ -29,6 +31,20 @@ interface Meta {
 export const AGE_GROUPS = 20;
 export const FERT_GROUPS = 7;
 const OFF = { popM: 0, popF: 20, deathsM: 40, deathsF: 60, fert: 80, tfr: 87, e0: 88, medianAge: 89 } as const;
+
+/** Official WPP 2024 annual figures for one place and calendar year (people, not thousands). */
+export interface Annual {
+  year: number;
+  population: number; // 1 July
+  births: number;
+  deaths: number;
+  netMigration: number;
+  change: number; // 1 January of year to 1 January of next year
+  growthRate: number; // %
+}
+
+const SERIES = ["population", "births", "deaths", "netMigration", "change", "growthRate"] as const;
+type SeriesKey = (typeof SERIES)[number];
 
 /** One location at one (possibly fractional) year. Shares are percentages. */
 export interface Profile {
@@ -91,23 +107,25 @@ export class Dataset {
   readonly license: string;
   private readonly nYears: number;
   private readonly nRec: number;
-  private readonly pop: Float32Array;
+  private readonly annual: Float32Array;
+  private readonly nLoc: number;
   private readonly rec: Uint16Array;
   private readonly meta: Meta;
 
   private constructor(buf: ArrayBuffer) {
     const view = new DataView(buf);
     const magic = String.fromCharCode(...new Uint8Array(buf, 0, 4));
-    if (magic !== "WPP4") throw new Error("The data file has an unexpected format.");
+    if (magic !== "WPP5") throw new Error("The data file has an unexpected format.");
     const nLoc = view.getUint16(4, true);
+    this.nLoc = nLoc;
     this.nYears = view.getUint16(6, true);
     this.nRec = view.getUint16(8, true);
     const metaLen = view.getUint32(10, true);
     this.meta = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 14, metaLen)));
     let off = 14 + metaLen;
     off += (4 - (off % 4)) % 4;
-    this.pop = new Float32Array(buf, off, nLoc * this.nYears);
-    off += nLoc * this.nYears * 4;
+    this.annual = new Float32Array(buf, off, SERIES.length * nLoc * this.nYears);
+    off += SERIES.length * nLoc * this.nYears * 4;
     this.rec = new Uint16Array(buf.slice(off, off + nLoc * this.nYears * this.nRec * 2));
 
     // undo year-delta encoding in place
@@ -163,8 +181,35 @@ export class Dataset {
     out.tfr = v(OFF.tfr, this.meta.scales.tfr);
     out.e0 = v(OFF.e0, this.meta.scales.e0);
     out.medianAge = v(OFF.medianAge, this.meta.scales.medianAge);
-    const pa = this.pop[place * this.nYears + y0], pb = this.pop[place * this.nYears + y1];
-    out.population = pa < 0 || pb < 0 ? NaN : pa + (pb - pa) * f;
+    const pa = this.series("population", place, y0), pb = this.series("population", place, y1);
+    out.population = pa + (pb - pa) * f;
+    return out;
+  }
+
+  private series(key: SeriesKey, place: number, yearIndex: number): number {
+    return this.annual[(SERIES.indexOf(key) * this.nLoc + place) * this.nYears + yearIndex];
+  }
+
+  /** Official annual figures; counts converted from thousands to people. */
+  annualFigures(place: number, year: number): Annual | null {
+    const y = Math.round(year) - this.yearStart;
+    if (y < 0 || y >= this.nYears) return null;
+    const k = (key: SeriesKey) => this.series(key, place, y) * 1000;
+    return {
+      year: Math.round(year),
+      population: k("population"),
+      births: k("births"),
+      deaths: k("deaths"),
+      netMigration: k("netMigration"),
+      change: k("change"),
+      growthRate: this.series("growthRate", place, y),
+    };
+  }
+
+  /** Total population (people, 1 July) for every year, for charts. */
+  populationSeries(place: number): Float64Array {
+    const out = new Float64Array(this.nYears);
+    for (let y = 0; y < this.nYears; y++) out[y] = this.series("population", place, y) * 1000;
     return out;
   }
 }

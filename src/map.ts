@@ -1,5 +1,10 @@
-// Canvas basemap. The selected place is always drawn under the centre of the
-// glyph; changing place flies the projection there.
+// Canvas basemap with free navigation.
+//   drag            move / rotate the world (with inertia)
+//   wheel / pinch   smooth zoom around the pointer
+//   double-tap      handled by the app: picks the country under the pointer
+// The view is described by the point at the glyph's home position (lon, lat)
+// and a projection scale. A single animation loop drives flights, inertia and
+// zoom easing, and redraws at most once per frame.
 
 import { geoContains, geoNaturalEarth1, geoPath, geoGraticule10, type GeoProjection } from "d3-geo";
 import { feature } from "topojson-client";
@@ -14,10 +19,10 @@ export interface WorldData {
 interface View {
   lon: number;
   lat: number;
-  span: number; // degrees that should fit across the lens
+  scale: number;
 }
 
-const REGION_VIEWS: Record<number, View> = {
+const REGION_VIEWS: Record<number, { lon: number; lat: number; span: number }> = {
   900: { lon: 12, lat: 8, span: 0 },
   903: { lon: 18, lat: 2, span: 72 },
   935: { lon: 88, lat: 28, span: 95 },
@@ -27,107 +32,278 @@ const REGION_VIEWS: Record<number, View> = {
   909: { lon: 150, lat: -20, span: 70 },
 };
 
-const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+const DEG = 180 / Math.PI;
+const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+const wrapLon = (l: number) => ((((l + 180) % 360) + 360) % 360) - 180;
+const clampLat = (l: number) => Math.max(-72, Math.min(80, l));
 
 export class WorldMap {
   private ctx: CanvasRenderingContext2D;
   private features: Feature<Geometry, null>[];
   private projection: GeoProjection = geoNaturalEarth1();
+  private graticule = geoGraticule10();
+  private colors: Record<string, string> = {};
   private w = 0;
   private h = 0;
-  private cx = 0;
-  private cy = 0;
+  private hx = 0; // glyph home position
+  private hy = 0;
   private lens = 40;
-  private view: View = { lon: 0, lat: 0, span: 0 };
-  private anim = 0;
+
+  private view: View = { lon: 12, lat: 8, scale: 100 };
+  private anchor: [number, number] = [12, 8]; // lon/lat the glyph is pinned to
+  private home: View = { lon: 12, lat: 8, scale: 100 }; // view that centres the selection
+  private selectedCode = 900;
   private selected = new Set<number>();
   private compared = new Set<number>();
-  private colors: Record<string, string> = {};
-  private graticule = geoGraticule10();
 
-  constructor(private canvas: HTMLCanvasElement, private world: WorldData, private onPick: (code: number) => void) {
-    this.ctx = canvas.getContext("2d")!;
+  // animation state
+  private raf = 0;
+  private last = 0;
+  private flight: { from: View; to: View; dLon: number; t0: number; ms: number } | null = null;
+  private velocity = { x: 0, y: 0 };
+  private zoomTarget: { scale: number; x: number; y: number } | null = null;
+
+  constructor(
+    private canvas: HTMLCanvasElement,
+    private world: WorldData,
+    private onView: (x: number, y: number, offHome: boolean) => void,
+  ) {
+    this.ctx = canvas.getContext("2d", { alpha: false })!;
     const fc = feature(world.topology, world.topology.objects.countries) as unknown as { features: Feature<Geometry, null>[] };
     this.features = fc.features.filter((f) => f.id !== undefined);
     this.readColors();
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
       this.readColors();
-      this.draw();
+      this.requestFrame();
     });
   }
 
   readColors() {
     const cs = getComputedStyle(document.documentElement);
-    for (const k of ["ocean", "land", "border", "ink", "highlight", "rule", "female"]) this.colors[k] = cs.getPropertyValue(`--${k}`).trim();
+    for (const k of ["ocean", "land", "border", "ink", "highlight", "rule", "panel"]) this.colors[k] = cs.getPropertyValue(`--${k}`).trim();
   }
 
-  resize(w: number, h: number, cx: number, cy: number, lens: number) {
+  resize(w: number, h: number, hx: number, hy: number, lens: number) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    Object.assign(this, { w, h, cx, cy, lens });
+    const offset = this.w ? { x: this.hx, y: this.hy } : null;
+    Object.assign(this, { w, h, hx, hy, lens });
     this.canvas.width = Math.round(w * dpr);
     this.canvas.height = Math.round(h * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.draw();
+    this.home = this.viewFor(this.selectedCode);
+    if (!offset) this.view = { ...this.home };
+    this.view.scale = Math.max(this.view.scale, this.minScale());
+    this.requestFrame();
   }
 
-  viewFor(code: number): View {
-    if (REGION_VIEWS[code]) return REGION_VIEWS[code];
-    const p = this.world.places[code];
-    if (!p) return REGION_VIEWS[900];
-    const [w, s, e, n] = p.b;
-    let dLon = e - w;
-    if (dLon < 0) dLon += 360;
-    const span = Math.max(dLon * Math.cos((((s + n) / 2) * Math.PI) / 180), n - s);
-    return { lon: p.c[0], lat: p.c[1], span: Math.min(Math.max(span, 7), 140) };
+  // ---------- views -------------------------------------------------------
+  private worldScale() {
+    return Math.min(this.w / 5.2, this.h / 2.6);
+  }
+  private minScale() {
+    return this.worldScale() * 0.75;
+  }
+  private maxScale() {
+    return this.worldScale() * 60;
   }
 
+  private viewFor(code: number): View {
+    const region = REGION_VIEWS[code];
+    let lon: number, lat: number, span: number;
+    if (region) ({ lon, lat, span } = region);
+    else {
+      const p = this.world.places[code];
+      if (!p) return this.viewFor(900);
+      const [w, s, e, n] = p.b;
+      const dLon = (e - w + 360) % 360 || 1;
+      [lon, lat] = p.c;
+      span = Math.min(Math.max(Math.max(dLon * Math.cos(((s + n) / 2) / DEG), n - s), 7), 140);
+    }
+    const scale = span ? Math.max((this.lens * 2.1 * DEG) / span, this.worldScale() * 0.9) : this.worldScale();
+    return { lon, lat, scale };
+  }
+
+  private anchorFor(code: number): [number, number] {
+    const region = REGION_VIEWS[code];
+    if (region) return [region.lon, region.lat];
+    return this.world.places[code]?.c ?? [12, 8];
+  }
+
+  // ---------- public navigation ------------------------------------------------
   select(primary: number, compare: number | null, members: (code: number) => number[], animate: boolean) {
+    const moved = primary !== this.selectedCode;
+    this.selectedCode = primary;
     this.selected = new Set(members(primary));
     this.compared = new Set(compare === null ? [] : members(compare));
-    const target = this.viewFor(primary);
-    cancelAnimationFrame(this.anim);
-    if (!animate || this.w === 0) {
-      this.view = target;
-      this.draw();
+    this.anchor = this.anchorFor(primary);
+    this.home = this.viewFor(primary);
+    if (moved || !this.w) this.flyTo(this.home, animate);
+    else this.requestFrame();
+  }
+
+  /** Fly back so the selected place sits under the glyph again. */
+  recenter(animate = true) {
+    this.home = this.viewFor(this.selectedCode);
+    this.flyTo(this.home, animate);
+  }
+
+  flyTo(target: View, animate: boolean) {
+    this.stop();
+    if (!animate || !this.w) {
+      this.view = { ...target };
+      this.requestFrame();
       return;
     }
-    const from = { ...this.view };
-    let dLon = target.lon - from.lon;
+    let dLon = target.lon - this.view.lon;
     if (dLon > 180) dLon -= 360;
     if (dLon < -180) dLon += 360;
-    const fromScale = this.scaleFor(from), toScale = this.scaleFor(target);
-    const t0 = performance.now();
-    const step = (now: number) => {
-      const t = Math.min((now - t0) / 950, 1);
-      const k = ease(t);
-      // zoom out a little mid-flight so long jumps read as travel
-      const hop = Math.sin(Math.PI * k) * Math.min(Math.abs(dLon) / 180, 1) * 0.6;
-      this.view = { lon: from.lon + dLon * k, lat: from.lat + (target.lat - from.lat) * k, span: 0 };
-      this.draw(Math.exp(Math.log(fromScale) + (Math.log(toScale) - Math.log(fromScale)) * k - hop));
-      if (t < 1) this.anim = requestAnimationFrame(step);
-      else this.view = target;
-    };
-    this.anim = requestAnimationFrame(step);
+    const dist = Math.hypot(dLon, target.lat - this.view.lat);
+    const ms = 700 + Math.min(dist, 180) * 3.5;
+    this.flight = { from: { ...this.view }, to: target, dLon, t0: performance.now(), ms };
+    this.requestFrame();
   }
 
-  private scaleFor(v: View) {
-    const world = Math.min(this.w / 5.2, this.h / 2.6);
-    if (!v.span) return world;
-    return Math.max((this.lens * 2.1 * 180) / Math.PI / v.span, world * 0.9);
+  /** Stop flights, inertia and zoom easing (e.g. when the user grabs the map). */
+  stop() {
+    this.flight = null;
+    this.velocity = { x: 0, y: 0 };
+    this.zoomTarget = null;
   }
 
-  private project(scale: number) {
+  /** Move the map by a pixel offset, as when dragging. */
+  panBy(dx: number, dy: number) {
+    if (!dx && !dy) return;
+    const p = this.project();
+    const ll = p.invert?.([this.hx - dx, this.hy - dy]);
+    if (ll && Number.isFinite(ll[0]) && Number.isFinite(ll[1]) && Math.abs(ll[1]) < 89) {
+      this.view.lon = wrapLon(ll[0]);
+      this.view.lat = clampLat(ll[1]);
+    } else {
+      this.view.lon = wrapLon(this.view.lon - (dx / (this.view.scale * 0.8707)) * DEG);
+      this.view.lat = clampLat(this.view.lat + (dy / this.view.scale) * DEG);
+    }
+    this.requestFrame();
+  }
+
+  /** Release a drag with a velocity in px per ms. */
+  fling(vx: number, vy: number) {
+    const speed = Math.hypot(vx, vy);
+    if (speed < 0.05 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const max = 3;
+    const k = speed > max ? max / speed : 1;
+    this.velocity = { x: vx * k, y: vy * k };
+    this.requestFrame();
+  }
+
+  /** Zoom by a factor around a screen point; eased unless immediate. */
+  zoomAt(factor: number, x: number, y: number, immediate = false) {
+    this.flight = null;
+    const base = this.zoomTarget?.scale ?? this.view.scale;
+    const scale = Math.min(Math.max(base * factor, this.minScale()), this.maxScale());
+    if (immediate) {
+      this.zoomTarget = null;
+      this.applyZoom(scale, x, y);
+      this.requestFrame();
+    } else {
+      this.zoomTarget = { scale, x, y };
+      this.requestFrame();
+    }
+  }
+
+  private applyZoom(scale: number, x: number, y: number) {
+    const before = this.project().invert?.([x, y]);
+    this.view.scale = scale;
+    if (!before) return;
+    const after = this.project()(before);
+    if (after) this.panBy(after[0] - x, after[1] - y);
+  }
+
+  /** The place under a screen point: small-state dots first, then shapes. */
+  pickAt(x: number, y: number): number | null {
+    const p = this.project();
+    let best: number | null = null;
+    let bestD = 14;
+    for (const [code, place] of Object.entries(this.world.places)) {
+      if (!place.dot) continue;
+      const xy = p(place.c);
+      if (!xy) continue;
+      const d = Math.hypot(xy[0] - x, xy[1] - y);
+      if (d < bestD) (bestD = d), (best = Number(code));
+    }
+    if (best !== null) return best;
+    const ll = p.invert?.([x, y]);
+    if (!ll) return null;
+    const hit = this.features.find((f) => geoContains(f, ll));
+    return hit ? Number(hit.id) : null;
+  }
+
+  // ---------- frame loop -----------------------------------------------------------
+  private requestFrame() {
+    if (!this.raf) {
+      this.last = performance.now();
+      this.raf = requestAnimationFrame((t) => this.frame(t));
+    }
+  }
+
+  private frame(now: number) {
+    const dt = Math.min(now - this.last, 48);
+    this.last = now;
+    let active = false;
+
+    if (this.flight) {
+      const f = this.flight;
+      const t = Math.min((now - f.t0) / f.ms, 1);
+      const k = easeInOut(t);
+      // lift out a little mid-flight on long journeys, like a camera hop
+      const hop = Math.sin(Math.PI * k) * Math.min(Math.hypot(f.dLon, f.to.lat - f.from.lat) / 120, 1) * 0.7;
+      const ls = Math.log(f.from.scale) + (Math.log(f.to.scale) - Math.log(f.from.scale)) * k - hop;
+      this.view = {
+        lon: wrapLon(f.from.lon + f.dLon * k),
+        lat: f.from.lat + (f.to.lat - f.from.lat) * k,
+        scale: Math.max(Math.exp(ls), this.minScale()),
+      };
+      if (t >= 1) this.flight = null;
+      else active = true;
+    }
+
+    if (this.velocity.x || this.velocity.y) {
+      this.panBy(-this.velocity.x * dt, -this.velocity.y * dt);
+      const decay = Math.exp(-dt / 325); // friction
+      this.velocity.x *= decay;
+      this.velocity.y *= decay;
+      if (Math.hypot(this.velocity.x, this.velocity.y) < 0.01) this.velocity = { x: 0, y: 0 };
+      else active = true;
+    }
+
+    if (this.zoomTarget) {
+      const z = this.zoomTarget;
+      const k = 1 - Math.exp(-dt / 90);
+      const ls = Math.log(this.view.scale) + (Math.log(z.scale) - Math.log(this.view.scale)) * k;
+      this.applyZoom(Math.exp(ls), z.x, z.y);
+      if (Math.abs(Math.log(z.scale / this.view.scale)) < 0.002) {
+        this.applyZoom(z.scale, z.x, z.y);
+        this.zoomTarget = null;
+      } else active = true;
+    }
+
+    this.draw();
+    this.raf = active ? requestAnimationFrame((t) => this.frame(t)) : 0;
+  }
+
+  private project(scale = this.view.scale) {
     const p = this.projection.rotate([-this.view.lon, 0]).scale(scale).translate([0, 0]);
     const [x, y] = p([this.view.lon, this.view.lat]) ?? [0, 0];
-    p.translate([this.cx - x, this.cy - y]);
+    p.translate([this.hx - x, this.hy - y]);
     return p;
   }
 
-  draw(scale = this.scaleFor(this.view)) {
+  private draw() {
+    if (!this.w) return;
     const { ctx, colors: c } = this;
-    const p = this.project(scale);
+    const p = this.project();
     const path = geoPath(p, ctx);
-    ctx.clearRect(0, 0, this.w, this.h);
+    ctx.fillStyle = c.ocean;
+    ctx.fillRect(0, 0, this.w, this.h);
     ctx.beginPath();
     path({ type: "Sphere" });
     ctx.fillStyle = c.ocean;
@@ -147,7 +323,7 @@ export class WorldMap {
     ctx.stroke();
 
     const sel = this.features.filter((f) => this.selected.has(Number(f.id)));
-    if (sel.length && this.selected.size < 60) {
+    if (sel.length) {
       ctx.beginPath();
       for (const f of sel) path(f);
       ctx.fillStyle = c.highlight;
@@ -159,7 +335,7 @@ export class WorldMap {
       ctx.stroke();
     }
     const cmp = this.features.filter((f) => this.compared.has(Number(f.id)));
-    if (cmp.length && this.compared.size < 60) {
+    if (cmp.length) {
       ctx.beginPath();
       for (const f of cmp) path(f);
       ctx.setLineDash([3, 2]);
@@ -168,7 +344,6 @@ export class WorldMap {
       ctx.stroke();
       ctx.setLineDash([]);
     }
-    // small states not in the 1:110m shapes are drawn as dots
     for (const [code, place] of Object.entries(this.world.places)) {
       if (!place.dot) continue;
       const xy = p(place.c);
@@ -184,24 +359,9 @@ export class WorldMap {
         ctx.stroke();
       }
     }
-  }
 
-  pick(e: PointerEvent) {
-    const box = this.canvas.getBoundingClientRect();
-    const x = e.clientX - box.left, y = e.clientY - box.top;
-    const p = this.project(this.scaleFor(this.view));
-    let best: number | null = null, bestD = 14;
-    for (const [code, place] of Object.entries(this.world.places)) {
-      if (!place.dot) continue;
-      const xy = p(place.c);
-      if (!xy) continue;
-      const d = Math.hypot(xy[0] - x, xy[1] - y);
-      if (d < bestD) (bestD = d), (best = Number(code));
-    }
-    if (best === null) {
-      const lonlat = p.invert?.([x, y]);
-      if (lonlat) best = Number(this.features.find((f) => geoContains(f, lonlat))?.id ?? NaN);
-    }
-    if (best !== null && Number.isFinite(best)) this.onPick(best);
+    const a = p(this.anchor) ?? [this.hx, this.hy];
+    const scaleDrift = Math.abs(Math.log(this.view.scale / this.home.scale));
+    this.onView(a[0], a[1], Math.hypot(a[0] - this.hx, a[1] - this.hy) > 40 || scaleDrift > 0.35);
   }
 }

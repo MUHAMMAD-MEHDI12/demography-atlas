@@ -2,7 +2,9 @@ import "./styles.css";
 import { Dataset, emptyProfile, oldAgeDependency, type Place, type Profile } from "./data";
 import { Glyph, type ReadoutRow } from "./glyph";
 import { WorldMap, type WorldData } from "./map";
-import { formatPopulation, fmt, pct } from "./format";
+import { formatPopulation, fmt, pct, compact } from "./format";
+import { PopulationChart, ChangeChart, type ChangeMode } from "./charts";
+import { SITE } from "./site";
 
 declare global {
   interface Window {
@@ -24,7 +26,8 @@ async function loadWorld(): Promise<WorldData> {
 class App {
   private primary: Place;
   private compare: Place | null = null;
-  private year: number;
+  private year: number; // target year
+  private yearShown: number; // eased year that is drawn
   private playing = false;
   private target = emptyProfile();
   private shown = emptyProfile();
@@ -36,6 +39,10 @@ class App {
   private last = 0;
   private statsKey = "";
   private pickerMode: "place" | "compare" = "place";
+  private popChart: PopulationChart;
+  private changeChart: ChangeChart;
+  private changeMode: ChangeMode = "people";
+  private seriesCache = new Map<number, Float64Array>();
 
   constructor(private data: Dataset, world: WorldData) {
     const hash = new URLSearchParams(location.hash.slice(1));
@@ -43,13 +50,21 @@ class App {
     this.compare = data.byCode(Number(hash.get("vs"))) ?? null;
     const y = Number(hash.get("year"));
     this.year = y >= data.yearStart && y <= data.yearEnd ? Math.round(y) : data.lastEstimate;
+    this.yearShown = this.year;
 
     this.glyph = new Glyph($<HTMLElement>("glyph") as unknown as SVGSVGElement, data.ages, data.fertAges, (row, x, y) => this.tooltip(row, x, y));
-    this.map = new WorldMap($<HTMLCanvasElement>("map"), world, (code) => {
-      const place = data.byCode(code);
-      if (place) this.setPrimary(place);
+    this.map = new WorldMap($<HTMLCanvasElement>("map"), world, (x, y, offHome) => {
+      this.glyph.setAnchor(x, y);
+      $("recenter").hidden = !offHome;
     });
 
+    this.popChart = new PopulationChart($("pop-chart"), data.yearStart, data.lastEstimate);
+    this.changeChart = new ChangeChart($("change-chart"), data.lastEstimate);
+    this.renderSiteInfo();
+    if (this.compare) {
+      this.changeMode = "rate";
+      for (const btn of document.querySelectorAll<HTMLButtonElement>(".toggle button")) btn.setAttribute("aria-pressed", String(btn.dataset.mode === "rate"));
+    }
     this.bindStage();
     this.bindControls();
     this.buildPicker();
@@ -72,6 +87,9 @@ class App {
 
   private setCompare(place: Place | null) {
     this.compare = place && place.code !== this.primary.code ? place : null;
+    // growth rates compare fairly between places of very different size
+    const mode: ChangeMode = this.compare ? "rate" : "people";
+    if (mode !== this.changeMode) document.querySelector<HTMLButtonElement>(`.toggle button[data-mode="${mode}"]`)?.click();
     if (this.compare) this.cmpShown = this.copy(this.shown);
     this.updatePlace(true);
   }
@@ -85,6 +103,7 @@ class App {
     const p = this.primary;
     $("place-name").textContent = p.name;
     $("place-region").textContent = p.area === "Aggregate" ? (p.code === 900 ? "All countries and areas" : "Region") : p.region;
+    $("recenter-name").textContent = p.name;
     $("compare-btn").textContent = this.compare ? `vs ${this.compare.name}` : "Compare";
     $("compare-btn").classList.toggle("is-on", !!this.compare);
     $("compare-clear").hidden = !this.compare;
@@ -114,22 +133,30 @@ class App {
   private frame(now: number) {
     const dt = Math.min(now - this.last, 64);
     this.last = now;
+    const reduce = reducedMotion.matches;
     if (this.playing) {
       this.year += (dt / 1000) * PLAY_SPEED;
       if (this.year >= this.data.yearEnd) {
         this.year = this.data.yearEnd;
         this.setPlaying(false);
       }
+      this.yearShown = this.year;
+    } else {
+      // glide through the in-between years instead of jumping
+      const d = this.year - this.yearShown;
+      this.yearShown = reduce || Math.abs(d) < 0.002 ? this.year : this.yearShown + d * (1 - Math.exp(-dt / 110));
     }
-    this.data.profile(this.primary.index, this.year, this.target);
-    if (this.compare) this.data.profile(this.compare.index, this.year, this.cmpTarget);
+    this.data.profile(this.primary.index, this.yearShown, this.target);
+    if (this.compare) this.data.profile(this.compare.index, this.yearShown, this.cmpTarget);
 
-    const k = reducedMotion.matches ? 1 : 1 - Math.exp(-dt / 70);
-    let moving = this.approach(this.shown, this.target, k);
+    const k = reduce ? 1 : 1 - Math.exp(-dt / 120);
+    let moving = this.yearShown !== this.year;
+    moving = this.approach(this.shown, this.target, k) || moving;
     if (this.compare) moving = this.approach(this.cmpShown, this.cmpTarget, k) || moving;
 
     this.glyph.set(this.shown, this.compare ? this.cmpShown : null);
-    this.glyph.setProjection(this.year > this.data.lastEstimate + 0.5);
+    this.glyph.setProjection(this.yearShown > this.data.lastEstimate + 0.5);
+    this.glyph.setYear(Math.round(this.yearShown), Math.round(this.yearShown) > this.data.lastEstimate);
     this.updateTime();
 
     if (moving || this.playing) this.raf = requestAnimationFrame((t) => this.frame(t));
@@ -146,7 +173,7 @@ class App {
         else if (!Number.isFinite(s[i])) (s[i] = 0), (moving = true);
         else {
           const d = t[i] - s[i];
-          if (Math.abs(d) > 0.004) (s[i] += d * k), (moving = true);
+          if (Math.abs(d) > 0.002) (s[i] += d * k), (moving = true);
           else s[i] = t[i];
         }
       }
@@ -162,15 +189,16 @@ class App {
 
   // ---------- controls ------------------------------------------------------
   private updateTime() {
-    const y = Math.round(this.year);
+    const y = Math.round(this.yearShown);
     const slider = $<HTMLInputElement>("slider");
-    if (Number(slider.value) !== y) slider.value = String(y);
+    if (this.playing && Number(slider.value) !== y) slider.value = String(y);
     $("year").textContent = String(y);
     $("phase").textContent = y > this.data.lastEstimate ? "Projection" : "Estimate";
     const key = `${this.primary.code}/${this.compare?.code ?? ""}/${y}`;
     if (key !== this.statsKey) {
       this.statsKey = key;
       this.updateStats(y);
+      this.updateTrends(y);
       this.writeHash(y);
     }
   }
@@ -201,6 +229,80 @@ class App {
     }
   }
 
+  private series(place: Place) {
+    let s = this.seriesCache.get(place.index);
+    if (!s) this.seriesCache.set(place.index, (s = this.data.populationSeries(place.index)));
+    return s;
+  }
+
+  /** Trend chart, 5-year change chart, summary sentence and verification link. */
+  private updateTrends(y: number) {
+    const a = this.primary, b = this.compare;
+    this.popChart.update(this.series(a), b ? this.series(b) : null, y, a.name, b?.name ?? null);
+
+    const end = Math.max(y, this.data.yearStart + 4);
+    const years = [end - 4, end - 3, end - 2, end - 1, end];
+    const rows = (p: Place) => years.map((yr) => this.data.annualFigures(p.index, yr)!);
+    const ra = rows(a);
+    this.changeChart.update(ra, b ? rows(b) : null, a.name, b?.name ?? null, this.changeMode);
+    $("change-title").textContent = `Population change, ${years[0]}–${end}`;
+    $("change-legend").hidden = !b;
+    if (b) $("change-legend").textContent = `Filled bars: ${a.name}. Outlined bars: ${b.name}. Green is growth, red is decline.`;
+
+    // 1 July population five years apart
+    const from = Math.max(end - 5, this.data.yearStart);
+    const sentence = (p: Place) => {
+      const p0 = this.data.annualFigures(p.index, from)!.population;
+      const p1 = this.data.annualFigures(p.index, end)!.population;
+      const diff = p1 - p0;
+      const pctChange = (diff / p0) * 100;
+      const verb = diff > 0 ? "grew" : diff < 0 ? "shrank" : "did not change";
+      const tense = end > this.data.lastEstimate ? (diff >= 0 ? "is projected to grow" : "is projected to shrink") : verb;
+      return `${p.name} ${tense} from ${compact(p0, true)} to ${compact(p1, true)} (${diff >= 0 ? "+" : "−"}${fmt(Math.abs(pctChange), 1)}%) between 1 July ${from} and 1 July ${end}.`;
+    };
+    $("change-summary").textContent = [sentence(a), b ? sentence(b) : ""].filter(Boolean).join(" ");
+
+    const codes = [a.code, b?.code].filter((c) => c !== undefined).join(",");
+    // UN Data Portal indicators: 49 total population, 50 population change, 57 births, 60 deaths, 65 net migration
+    ($("verify-link") as HTMLAnchorElement).href =
+      `https://population.un.org/dataportal/data/indicators/49,50,57,60,65/locations/${codes}/start/${from}/end/${end}/table/pivotbylocation`;
+  }
+
+  private renderSiteInfo() {
+    const { lab, author, contact, repository } = SITE;
+    const setText = (id: string, text: string) => {
+      const el = $(id);
+      el.textContent = text;
+      el.hidden = !text;
+    };
+    if (lab.name || lab.intro) {
+      $("lab").hidden = false;
+      $("lab-name").textContent = lab.name ? `About ${lab.name}` : "About the lab";
+      setText("lab-affiliation", lab.affiliation);
+      setText("lab-intro", lab.intro);
+      if (lab.website) {
+        const link = $("lab-website");
+        link.hidden = false;
+        link.replaceChildren(Object.assign(document.createElement("a"), { href: lab.website, textContent: "Visit the lab website", target: "_blank", rel: "noopener" }));
+      }
+    }
+    const items: [string, string, string][] = [];
+    if (contact.email) items.push(["Email", `mailto:${contact.email}`, contact.email]);
+    if (contact.linkedin) items.push(["LinkedIn", contact.linkedin, contact.linkedin.replace(/^https?:\/\/(www\.)?/, "")]);
+    if (contact.github) items.push(["GitHub", contact.github, contact.github.replace(/^https?:\/\//, "")]);
+    if (repository) items.push(["Source code and issues", `${repository}/issues`, repository.replace(/^https?:\/\//, "")]);
+    $("contact-list").replaceChildren(
+      ...items.map(([label, href, text]) => {
+        const li = document.createElement("li");
+        li.append(`${label}: `, Object.assign(document.createElement("a"), { href, textContent: text, target: href.startsWith("mailto:") ? "" : "_blank", rel: "noopener" }));
+        return li;
+      }),
+    );
+    if (contact.location) $("contact-list").append(Object.assign(document.createElement("li"), { textContent: `Based in ${contact.location}` }));
+    const who = [author.name, author.role].filter(Boolean).join(", ");
+    $("site-foot").textContent = `Built by ${who}${lab.name ? `, ${lab.name}` : ""}. Code under the MIT License. Data © United Nations, CC BY 3.0 IGO.`;
+  }
+
   private writeHash(y: number) {
     const params = new URLSearchParams({ place: String(this.primary.code), year: String(y) });
     if (this.compare) params.set("vs", String(this.compare.code));
@@ -229,12 +331,22 @@ class App {
       this.setYear(Number(slider.value));
     });
     $("play").addEventListener("click", () => {
-      if (!this.playing && this.year >= this.data.yearEnd) this.year = this.data.yearStart;
+      if (!this.playing && this.year >= this.data.yearEnd) this.year = this.yearShown = this.data.yearStart;
+      else this.year = this.yearShown;
       this.setPlaying(!this.playing);
     });
     $("place-btn").addEventListener("click", () => this.openPicker("place"));
     $("compare-btn").addEventListener("click", () => this.openPicker("compare"));
     $("compare-clear").addEventListener("click", () => this.setCompare(null));
+    for (const btn of document.querySelectorAll<HTMLButtonElement>(".toggle button")) {
+      btn.addEventListener("click", () => {
+        this.changeMode = btn.dataset.mode as ChangeMode;
+        for (const other of document.querySelectorAll<HTMLButtonElement>(".toggle button")) other.setAttribute("aria-pressed", String(other === btn));
+        this.statsKey = "";
+        this.kick();
+      });
+    }
+    $("recenter").addEventListener("click", () => this.map.recenter(!reducedMotion.matches));
     document.addEventListener("keydown", (e) => {
       if (e.target instanceof HTMLInputElement || $<HTMLDialogElement>("picker").open) return;
       if (e.key === " " && !(e.target instanceof HTMLButtonElement)) {
@@ -246,25 +358,124 @@ class App {
 
   private bindStage() {
     const stage = $("stage");
-    let down: { x: number; y: number; hit: boolean } | null = null;
+    const pointers = new Map<number, { x: number; y: number }>();
+    let drag: { startX: number; startY: number; moved: boolean; t: number; vx: number; vy: number } | null = null;
+    let pinch: { dist: number; mx: number; my: number } | null = null;
+    let lastTap = { t: 0, x: 0, y: 0 };
     let hideTimer = 0;
-    stage.addEventListener("pointermove", (e) => {
-      if (e.pointerType === "mouse") stage.classList.toggle("is-over-bars", this.glyph.hit(e));
-    });
-    stage.addEventListener("pointerleave", () => this.tooltip(null, 0, 0));
+    const local = (e: { clientX: number; clientY: number }) => {
+      const box = stage.getBoundingClientRect();
+      return { x: e.clientX - box.left, y: e.clientY - box.top };
+    };
+    const pinchState = () => {
+      const [a, b] = [...pointers.values()];
+      return { dist: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+    };
+    const openAt = (x: number, y: number) => {
+      const code = this.map.pickAt(x, y);
+      const place = code === null ? undefined : this.data.byCode(code);
+      if (place) {
+        this.tooltip(null, 0, 0);
+        this.setPrimary(place);
+      }
+    };
+
     stage.addEventListener("pointerdown", (e) => {
-      if ((e.target as Element).closest("button, .legend")) return;
-      const hit = this.glyph.hit(e);
-      down = { x: e.clientX, y: e.clientY, hit };
-      if (hit && e.pointerType !== "mouse") {
-        clearTimeout(hideTimer);
-        hideTimer = window.setTimeout(() => this.tooltip(null, 0, 0), 3000);
+      if ((e.target as Element).closest("button, .legend, .tooltip")) return;
+      try {
+        stage.setPointerCapture(e.pointerId);
+      } catch {
+        /* pointer already released */
+      }
+      pointers.set(e.pointerId, local(e));
+      this.map.stop();
+      if (pointers.size === 2) {
+        pinch = pinchState();
+        drag = null;
+        this.tooltip(null, 0, 0);
+        return;
+      }
+      const p = local(e);
+      drag = { startX: p.x, startY: p.y, moved: false, t: performance.now(), vx: 0, vy: 0 };
+    });
+
+    stage.addEventListener("pointermove", (e) => {
+      const prev = pointers.get(e.pointerId);
+      if (!prev) {
+        // plain mouse hover: readout for the bars
+        if (e.pointerType === "mouse") stage.classList.toggle("is-over-bars", this.glyph.hit(e));
+        return;
+      }
+      const p = local(e);
+      pointers.set(e.pointerId, p);
+      if (pinch && pointers.size === 2) {
+        const now = pinchState();
+        this.map.panBy(pinch.mx - now.mx, pinch.my - now.my);
+        this.map.zoomAt(now.dist / pinch.dist, now.mx, now.my, true);
+        pinch = now;
+        return;
+      }
+      if (!drag) return;
+      if (!drag.moved && Math.hypot(p.x - drag.startX, p.y - drag.startY) > 4) {
+        drag.moved = true;
+        stage.classList.add("is-dragging");
+        this.tooltip(null, 0, 0);
+      }
+      if (drag.moved) {
+        const now = performance.now();
+        const dtm = Math.max(now - drag.t, 1);
+        const dx = p.x - prev.x, dy = p.y - prev.y;
+        this.map.panBy(-dx, -dy);
+        // smoothed velocity for the fling
+        drag.vx = drag.vx * 0.6 + (dx / dtm) * 0.4;
+        drag.vy = drag.vy * 0.6 + (dy / dtm) * 0.4;
+        drag.t = now;
       }
     });
-    stage.addEventListener("pointerup", (e) => {
-      if (down && !down.hit && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 8) this.map.pick(e);
-      down = null;
+
+    const end = (e: PointerEvent) => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.delete(e.pointerId);
+      stage.classList.remove("is-dragging");
+      if (pinch) {
+        if (pointers.size < 2) pinch = null;
+        drag = null;
+        return;
+      }
+      if (!drag) return;
+      const p = local(e);
+      if (drag.moved) {
+        if (performance.now() - drag.t < 80) this.map.fling(drag.vx, drag.vy);
+      } else if (e.type === "pointerup") {
+        const now = performance.now();
+        const isDouble = now - lastTap.t < 350 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 30;
+        lastTap = isDouble ? { t: 0, x: 0, y: 0 } : { t: now, x: p.x, y: p.y };
+        if (isDouble) openAt(p.x, p.y);
+        else if (this.glyph.hit(e)) {
+          if (e.pointerType !== "mouse") {
+            clearTimeout(hideTimer);
+            hideTimer = window.setTimeout(() => this.tooltip(null, 0, 0), 3000);
+          }
+        } else this.tooltip(null, 0, 0);
+      }
+      drag = null;
+    };
+    stage.addEventListener("pointerup", end);
+    stage.addEventListener("pointercancel", end);
+    stage.addEventListener("pointerleave", (e) => {
+      if (!pointers.size && e.pointerType === "mouse") this.tooltip(null, 0, 0);
     });
+    stage.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        const p = local(e);
+        const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+        this.map.zoomAt(Math.exp(-delta * 0.0016), p.x, p.y);
+      },
+      { passive: false },
+    );
+    stage.addEventListener("dblclick", (e) => e.preventDefault());
   }
 
   private resize() {
@@ -273,7 +484,7 @@ class App {
     if (!width || !height) return;
     const headH = ($("stage").querySelector(".head") as HTMLElement).offsetHeight;
     this.glyph.resize(width, height, headH);
-    this.map.resize(width, height, this.glyph.cx, this.glyph.cy, this.glyph.lensRadius);
+    this.map.resize(width, height, this.glyph.homeX, this.glyph.homeY, this.glyph.lensRadius);
     this.kick();
   }
 

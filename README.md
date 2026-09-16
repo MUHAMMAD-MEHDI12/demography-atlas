@@ -16,7 +16,14 @@ Years up to 2023 are UN estimates. Later years are the UN median projection and 
 - Play button that animates 150 years of change smoothly
 - Compare mode: overlay a second place as outlines
 - Median age, births per woman, life expectancy and old-age dependency for every year
-- Tap a country on the map or search by name
+- Explore the map freely: drag to move it (with momentum), scroll or pinch to zoom, double-click or double-tap any country to open its profile
+- The chart stays pinned to the selected country while you move the map; "Back to …" re-centres it
+- Smooth transitions between years, places and comparisons
+- The year and whether it is a UN estimate or projection are shown under the chart
+- Total population chart for 1950–2100, with the comparison place overlaid
+- Population change for the last 5 years before the selected year, as people or growth %, with the official births, deaths and net migration behind each year
+- A "Check these numbers on the UN Data Portal" link that opens the same figures on the UN website
+- About, lab, data sources and contact sections
 - Shareable links: the address updates with place, year and comparison, e.g. `#place=392&year=2060&vs=566`
 - Works on phones, supports light and dark mode
 
@@ -31,8 +38,14 @@ All figures come from the **United Nations World Population Prospects 2024** (UN
 | Births by mother's age | `percentASFR1dt` |
 | Births per woman | `tfr1dt`, `tfrproj1dt` |
 | Life expectancy | `e01dt`, `e0proj1dt` |
+| Births, deaths, population change, growth rate | `misc1dt`, `miscproj1dt` |
+| Net migration | `mig1dt`, `migproj1dt` |
 
 Checks run by the pipeline: mid-year totals match the UN published figures (China 2023: 1,422,585 thousand; world 2023: 8,091,735 thousand), and derived deaths match official total deaths within a median of 0.2%.
+
+## Add your lab and contact details
+
+Open `src/site.ts` and fill in the lab name, introduction, email and links. Empty fields are hidden on the website.
 
 ## Project structure
 
@@ -41,8 +54,10 @@ pipeline/build_data.py     Python: WPP 2024 source files -> public/data/wpp2024.
 scripts/build-geo.mjs      Node: Natural Earth -> public/data/world.json
 scripts/make-standalone.mjs  optional single-file HTML build
 src/data.ts                loads the data pack, interpolates between years
-src/glyph.ts               draws the three-arm chart (SVG)
-src/map.ts                 draws the map and flies between places (Canvas, d3-geo)
+src/glyph.ts               draws the three-arm chart and the year label (SVG)
+src/charts.ts              population trend and 5-year change charts
+src/site.ts                lab and contact details (edit this)
+src/map.ts                 draws the map; drag, inertia, zoom and fly-to (Canvas, d3-geo)
 src/main.ts                app state, controls, search, comparison, links
 src/styles.css             layout and theme
 .github/workflows/deploy.yml  builds and publishes to GitHub Pages

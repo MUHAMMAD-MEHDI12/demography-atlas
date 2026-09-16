@@ -26,11 +26,16 @@
           </div>
         </header>
         <div class="tooltip" id="tooltip" role="status" hidden></div>
+        <button type="button" class="recenter" id="recenter" hidden>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" /><circle cx="12" cy="12" r="7.5" fill="none" /></svg>
+          Back to <span id="recenter-name"></span>
+        </button>
         <ul class="legend" aria-label="Legend">
           <li><i class="sw sw-m"></i>Male</li>
           <li><i class="sw sw-f"></i>Female</li>
           <li><i class="sw sw-p"></i>Projection</li>
           <li class="legend-cmp" id="legend-cmp" hidden><i class="sw sw-c"></i><span id="legend-cmp-name"></span></li>
+          <li class="hint"><span class="hint-long">Drag to move, scroll or pinch to zoom, double-tap a country to open it</span><span class="hint-short">Drag, pinch, double-tap a country</span></li>
         </ul>
         <p class="status" id="status">Loading UN population data</p>
       </main>
@@ -56,12 +61,118 @@
           <div class="wide"><dt>People 65+ for every 100 aged 15–64</dt><dd data-k="oldAge"></dd></div>
         </dl>
 
-        <p class="source">
-          Data: United Nations, DESA, Population Division, World Population Prospects 2024, CC BY 3.0 IGO.
-          Years after 2023 are the median projection. Deaths by age are computed from WPP death rates and mid-year population.
-        </p>
+        <section class="panel-block" aria-labelledby="trend-title">
+          <h2 id="trend-title">Total population, 1950–2100</h2>
+          <div class="chart" id="pop-chart">
+            <p class="chart-readout" aria-live="polite"></p>
+            <div class="chart-body"></div>
+          </div>
+        </section>
+
+        <section class="panel-block" aria-labelledby="change-title">
+          <div class="block-head">
+            <h2 id="change-title">Population change, last 5 years</h2>
+            <div class="toggle" role="group" aria-label="Show change as">
+              <button type="button" data-mode="people" aria-pressed="true">People</button>
+              <button type="button" data-mode="rate" aria-pressed="false">Growth %</button>
+            </div>
+          </div>
+          <p class="change-summary" id="change-summary"></p>
+          <p class="change-legend muted" id="change-legend" hidden></p>
+          <div class="chart" id="change-chart">
+            <div class="chart-body"></div>
+            <div class="table-wrap"><table class="change-table"></table></div>
+          </div>
+          <p class="verify">
+            <a id="verify-link" href="https://population.un.org/dataportal/" target="_blank" rel="noopener">Check these numbers on the UN Data Portal</a>
+          </p>
+        </section>
+
+        <nav class="panel-links" aria-label="More information">
+          <a href="#about">About</a>
+          <a href="#sources">Data sources</a>
+          <a href="#contact">Contact</a>
+        </nav>
       </section>
     </div>
+
+    <footer class="site" id="site">
+      <div class="site-inner">
+        <section id="about" class="site-block">
+          <h2>About this atlas</h2>
+          <p>
+            Demography Atlas shows how the population of every country and area changes between 1950 and 2100.
+            For each place, three age charts sit around it on the map: how the population is spread across ages,
+            at which ages people die, and how old mothers are when children are born.
+          </p>
+          <p>
+            Pick a place from the list or double-tap it on the map, move through the years with the slider or the play button,
+            and use Compare to overlay a second place. Years up to 2023 are UN estimates; later years are UN projections.
+          </p>
+        </section>
+
+        <section id="lab" class="site-block" hidden>
+          <h2 id="lab-name">About the lab</h2>
+          <p class="lab-affiliation" id="lab-affiliation" hidden></p>
+          <p id="lab-intro" hidden></p>
+          <p id="lab-website" hidden></p>
+        </section>
+
+        <section id="sources" class="site-block site-wide">
+          <h2>Data sources and how to verify them</h2>
+          <p>
+            Every number comes from the <strong>United Nations World Population Prospects 2024</strong>, published by the
+            Population Division of the UN Department of Economic and Social Affairs. Nothing is simulated.
+          </p>
+          <div class="table-wrap">
+            <table class="sources-table">
+              <thead>
+                <tr><th scope="col">What you see</th><th scope="col">UN series</th><th scope="col">How it is used</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Population by age and sex</td><td>Population by 1-year age groups and sex</td><td>Grouped into 5-year ages, shown as shares of the total</td></tr>
+                <tr><td>Total population</td><td>Total population by sex (1 July)</td><td>As published</td></tr>
+                <tr><td>Deaths by age and sex</td><td>Age-specific mortality rates × population</td><td>Totals match official deaths within a median of 0.2%</td></tr>
+                <tr><td>Births by mother's age</td><td>Percentage age-specific fertility</td><td>Ages 10–14 counted in 15–19, and 50–54 in 45–49</td></tr>
+                <tr><td>Births per woman, life expectancy</td><td>Total fertility rate, life expectancy at birth</td><td>As published</td></tr>
+                <tr><td>Births, deaths, net migration, population change, growth rate</td><td>Total births, total deaths, net migration, population change, rate of population change</td><td>As published, per calendar year</td></tr>
+                <tr><td>Median age, people 65+ per 100 aged 15–64</td><td>Population by age</td><td>Calculated from the age data</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            UN figures can differ from those published by national statistics offices. The UN reviews each country's censuses,
+            surveys and registration data, adjusts for gaps such as under-counting, and applies the same methods everywhere so that
+            places and years can be compared fairly. When you check a number, compare it with the UN Data Portal rather than a national source.
+          </p>
+          <h3>Checks run when the data is built</h3>
+          <ul>
+            <li>Population on 1 July 2023 matches UN published figures exactly: World 8,091,735,000; India 1,438,070,000; China 1,422,585,000; Pakistan 247,504,000.</li>
+            <li>For every place and year from 1950 to 2100, births − deaths + net migration agrees with the UN population change to within 8,000 people; the small gaps come from rounding in the source tables.</li>
+            <li>Deaths by age, computed from UN death rates, add up to the official UN death totals within a median of 0.2%.</li>
+          </ul>
+          <h3>Verify it yourself</h3>
+          <ul class="link-list">
+            <li><a href="https://population.un.org/dataportal/" target="_blank" rel="noopener">UN Population Division Data Portal</a>: choose a country and an indicator, such as total population or population change</li>
+            <li><a href="https://population.un.org/wpp/" target="_blank" rel="noopener">World Population Prospects 2024</a>: official downloads and documentation</li>
+            <li><a href="https://population.un.org/wpp/assets/Files/WPP2024_Summary-of-Results.pdf" target="_blank" rel="noopener">WPP 2024 Summary of Results (PDF)</a></li>
+            <li><a href="https://github.com/PPgp/wpp2024" target="_blank" rel="noopener">wpp2024 data package</a>: the files this atlas is built from</li>
+            <li><a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a>: map boundaries, for display only</li>
+          </ul>
+          <p class="cite">
+            Citation: United Nations, Department of Economic and Social Affairs, Population Division (2024).
+            World Population Prospects 2024. Licensed under CC BY 3.0 IGO.
+          </p>
+        </section>
+
+        <section id="contact" class="site-block">
+          <h2>Contact</h2>
+          <p id="contact-intro">Questions, corrections or ideas for this atlas are welcome.</p>
+          <ul class="link-list" id="contact-list"></ul>
+        </section>
+      </div>
+      <p class="site-foot" id="site-foot"></p>
+    </footer>
 
     <dialog class="picker" id="picker" aria-labelledby="picker-title">
       <form method="dialog" class="picker-head">
