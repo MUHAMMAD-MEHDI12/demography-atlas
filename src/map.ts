@@ -130,15 +130,29 @@ export class WorldMap {
   }
 
   // ---------- public navigation ------------------------------------------------
-  select(primary: number, compare: number | null, members: (code: number) => number[], animate: boolean) {
+  /**
+   * Select a place. With `stay`, the map keeps its position and only the chart
+   * moves to the place (used for double-click); the map still flies if the place
+   * is off screen.
+   */
+  select(primary: number, compare: number | null, members: (code: number) => number[], animate: boolean, stay = false) {
     const moved = primary !== this.selectedCode;
     this.selectedCode = primary;
     this.selected = new Set(members(primary));
     this.compared = new Set(compare === null ? [] : members(compare));
     this.anchor = this.anchorFor(primary);
     this.home = this.viewFor(primary);
-    if (moved || !this.w) this.flyTo(this.home, animate);
+    if (stay && this.w && this.onScreen(this.anchor)) {
+      this.stop();
+      this.requestFrame();
+    } else if (moved || !this.w) this.flyTo(this.home, animate);
     else this.requestFrame();
+  }
+
+  private onScreen(lonlat: [number, number]) {
+    const xy = this.project()(lonlat);
+    const m = 30;
+    return !!xy && xy[0] > m && xy[0] < this.w - m && xy[1] > m && xy[1] < this.h - m;
   }
 
   /** Fly back so the selected place sits under the glyph again. */

@@ -1,8 +1,8 @@
 // Loads and decodes the WPP 2024 data pack produced by pipeline/build_data.py.
 //
 // Layout (little endian):
-//   "WPP5" | uint16 nLoc | uint16 nYears | uint16 nRecord | uint32 metaLength | meta JSON | pad to 4
-//   float32[6 * nLoc * nYears]          official annual series, in this order:
+//   "WPP6" | uint16 nLoc | uint16 nYears | uint16 nRecord | uint32 metaLength | meta JSON | pad to 8
+//   float64[6 * nLoc * nYears]          official annual series, in this order:
 //                                        population (1 July), births, deaths, net migration,
 //                                        population change (thousands) and growth rate (%)
 //   uint16[nLoc * nYears * nRecord]     year-delta-encoded record, see meta.layout
@@ -107,7 +107,7 @@ export class Dataset {
   readonly license: string;
   private readonly nYears: number;
   private readonly nRec: number;
-  private readonly annual: Float32Array;
+  private readonly annual: Float64Array;
   private readonly nLoc: number;
   private readonly rec: Uint16Array;
   private readonly meta: Meta;
@@ -115,7 +115,7 @@ export class Dataset {
   private constructor(buf: ArrayBuffer) {
     const view = new DataView(buf);
     const magic = String.fromCharCode(...new Uint8Array(buf, 0, 4));
-    if (magic !== "WPP5") throw new Error("The data file has an unexpected format.");
+    if (magic !== "WPP6") throw new Error("The data file has an unexpected format.");
     const nLoc = view.getUint16(4, true);
     this.nLoc = nLoc;
     this.nYears = view.getUint16(6, true);
@@ -123,9 +123,9 @@ export class Dataset {
     const metaLen = view.getUint32(10, true);
     this.meta = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 14, metaLen)));
     let off = 14 + metaLen;
-    off += (4 - (off % 4)) % 4;
-    this.annual = new Float32Array(buf, off, SERIES.length * nLoc * this.nYears);
-    off += SERIES.length * nLoc * this.nYears * 4;
+    off += (8 - (off % 8)) % 8;
+    this.annual = new Float64Array(buf, off, SERIES.length * nLoc * this.nYears);
+    off += SERIES.length * nLoc * this.nYears * 8;
     this.rec = new Uint16Array(buf.slice(off, off + nLoc * this.nYears * this.nRec * 2));
 
     // undo year-delta encoding in place

@@ -5,6 +5,7 @@ import { WorldMap, type WorldData } from "./map";
 import { formatPopulation, fmt, pct, compact } from "./format";
 import { PopulationChart, ChangeChart, type ChangeMode } from "./charts";
 import { SITE } from "./site";
+import { Details } from "./details";
 
 declare global {
   interface Window {
@@ -43,6 +44,11 @@ class App {
   private changeChart: ChangeChart;
   private changeMode: ChangeMode = "people";
   private seriesCache = new Map<number, Float64Array>();
+  private details: Details;
+  // chart position: follows the map, gliding when it jumps to a new place
+  private anchorTarget = { x: 0, y: 0 };
+  private anchorShown = { x: 0, y: 0 };
+  private glideUntil = 0;
 
   constructor(private data: Dataset, world: WorldData) {
     const hash = new URLSearchParams(location.hash.slice(1));
@@ -54,13 +60,29 @@ class App {
 
     this.glyph = new Glyph($<HTMLElement>("glyph") as unknown as SVGSVGElement, data.ages, data.fertAges, (row, x, y) => this.tooltip(row, x, y));
     this.map = new WorldMap($<HTMLCanvasElement>("map"), world, (x, y, offHome) => {
-      this.glyph.setAnchor(x, y);
+      this.anchorTarget = { x, y };
+      if (performance.now() < this.glideUntil) this.kick();
+      else {
+        this.anchorShown = { x, y };
+        this.glyph.setAnchor(x, y);
+      }
       $("recenter").hidden = !offHome;
     });
 
     this.popChart = new PopulationChart($("pop-chart"), data.yearStart, data.lastEstimate);
     this.changeChart = new ChangeChart($("change-chart"), data.lastEstimate);
     this.renderSiteInfo();
+    this.details = new Details(
+      data,
+      () => ({ primary: this.primary, compare: this.compare, year: Math.round(this.year) }),
+      (y) => {
+        this.setPlaying(false);
+        this.setYear(y);
+        const slider = $<HTMLInputElement>("slider");
+        slider.value = String(y);
+        this.statsKey = "";
+      },
+    );
     if (this.compare) {
       this.changeMode = "rate";
       for (const btn of document.querySelectorAll<HTMLButtonElement>(".toggle button")) btn.setAttribute("aria-pressed", String(btn.dataset.mode === "rate"));
@@ -79,10 +101,11 @@ class App {
   }
 
   // ---------- state ---------------------------------------------------------
-  private setPrimary(place: Place) {
+  private setPrimary(place: Place, stay = false) {
     if (this.compare?.code === place.code) this.compare = null;
     this.primary = place;
-    this.updatePlace(true);
+    if (stay) this.glideUntil = performance.now() + 700;
+    this.updatePlace(true, stay);
   }
 
   private setCompare(place: Place | null) {
@@ -99,7 +122,7 @@ class App {
     this.kick();
   }
 
-  private updatePlace(animate: boolean) {
+  private updatePlace(animate: boolean, stay = false) {
     const p = this.primary;
     $("place-name").textContent = p.name;
     $("place-region").textContent = p.area === "Aggregate" ? (p.code === 900 ? "All countries and areas" : "Region") : p.region;
@@ -110,7 +133,7 @@ class App {
     $("legend-cmp").hidden = !this.compare;
     $("legend-cmp-name").textContent = this.compare?.name ?? "";
     document.title = `${p.name}, demographic profile | Demography Atlas`;
-    this.map.select(p.code, this.compare?.code ?? null, (code) => this.members(code), animate && !reducedMotion.matches);
+    this.map.select(p.code, this.compare?.code ?? null, (code) => this.members(code), animate && !reducedMotion.matches, stay);
     this.statsKey = "";
     this.kick();
   }
@@ -154,6 +177,13 @@ class App {
     moving = this.approach(this.shown, this.target, k) || moving;
     if (this.compare) moving = this.approach(this.cmpShown, this.cmpTarget, k) || moving;
 
+    if (this.anchorShown.x !== this.anchorTarget.x || this.anchorShown.y !== this.anchorTarget.y) {
+      const kk = reducedMotion.matches || now > this.glideUntil ? 1 : 1 - Math.exp(-dt / 90);
+      const dx = this.anchorTarget.x - this.anchorShown.x, dy = this.anchorTarget.y - this.anchorShown.y;
+      if (Math.hypot(dx, dy) < 0.5) this.anchorShown = { ...this.anchorTarget };
+      else (this.anchorShown.x += dx * kk), (this.anchorShown.y += dy * kk), (moving = true);
+      this.glyph.setAnchor(this.anchorShown.x, this.anchorShown.y);
+    }
     this.glyph.set(this.shown, this.compare ? this.cmpShown : null);
     this.glyph.setProjection(this.yearShown > this.data.lastEstimate + 0.5);
     this.glyph.setYear(Math.round(this.yearShown), Math.round(this.yearShown) > this.data.lastEstimate);
@@ -191,14 +221,17 @@ class App {
   private updateTime() {
     const y = Math.round(this.yearShown);
     const slider = $<HTMLInputElement>("slider");
-    if (this.playing && Number(slider.value) !== y) slider.value = String(y);
-    $("year").textContent = String(y);
-    $("phase").textContent = y > this.data.lastEstimate ? "Projection" : "Estimate";
+    if (Number(slider.value) !== y && (this.playing || document.activeElement !== slider)) slider.value = String(y);
+    const bubble = $("year");
+    bubble.textContent = String(y);
+    bubble.style.setProperty("--pos", String((this.yearShown - this.data.yearStart) / (this.data.yearEnd - this.data.yearStart)));
+    bubble.classList.toggle("is-proj", y > this.data.lastEstimate);
     const key = `${this.primary.code}/${this.compare?.code ?? ""}/${y}`;
     if (key !== this.statsKey) {
       this.statsKey = key;
       this.updateStats(y);
       this.updateTrends(y);
+      this.details.refresh();
       this.writeHash(y);
     }
   }
@@ -338,6 +371,8 @@ class App {
     $("place-btn").addEventListener("click", () => this.openPicker("place"));
     $("compare-btn").addEventListener("click", () => this.openPicker("compare"));
     $("compare-clear").addEventListener("click", () => this.setCompare(null));
+    $("details-btn").addEventListener("click", () => this.details.open());
+    $("details-link").addEventListener("click", () => this.details.open());
     for (const btn of document.querySelectorAll<HTMLButtonElement>(".toggle button")) {
       btn.addEventListener("click", () => {
         this.changeMode = btn.dataset.mode as ChangeMode;
@@ -348,7 +383,7 @@ class App {
     }
     $("recenter").addEventListener("click", () => this.map.recenter(!reducedMotion.matches));
     document.addEventListener("keydown", (e) => {
-      if (e.target instanceof HTMLInputElement || $<HTMLDialogElement>("picker").open) return;
+      if (e.target instanceof HTMLInputElement || $<HTMLDialogElement>("picker").open || this.details.isOpen) return;
       if (e.key === " " && !(e.target instanceof HTMLButtonElement)) {
         e.preventDefault();
         $("play").click();
@@ -376,12 +411,12 @@ class App {
       const place = code === null ? undefined : this.data.byCode(code);
       if (place) {
         this.tooltip(null, 0, 0);
-        this.setPrimary(place);
+        this.setPrimary(place, true); // keep the map still; the chart moves to the place
       }
     };
 
     stage.addEventListener("pointerdown", (e) => {
-      if ((e.target as Element).closest("button, .legend, .tooltip")) return;
+      if ((e.target as Element).closest("button, .legend, .tooltip, .timeline")) return;
       try {
         stage.setPointerCapture(e.pointerId);
       } catch {
@@ -468,6 +503,7 @@ class App {
     stage.addEventListener(
       "wheel",
       (e) => {
+        if ((e.target as Element).closest(".timeline")) return;
         e.preventDefault();
         const p = local(e);
         const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
@@ -483,7 +519,9 @@ class App {
     const { width, height } = stage.getBoundingClientRect();
     if (!width || !height) return;
     const headH = ($("stage").querySelector(".head") as HTMLElement).offsetHeight;
-    this.glyph.resize(width, height, headH);
+    const legend = stage.querySelector(".legend") as HTMLElement;
+    const bottomH = height - legend.offsetTop + 6; // timeline and legend sit at the bottom
+    this.glyph.resize(width, height, headH, bottomH);
     this.map.resize(width, height, this.glyph.homeX, this.glyph.homeY, this.glyph.lensRadius);
     this.kick();
   }

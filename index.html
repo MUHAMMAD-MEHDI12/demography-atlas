@@ -28,7 +28,7 @@
         <div class="tooltip" id="tooltip" role="status" hidden></div>
         <button type="button" class="recenter" id="recenter" hidden>
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" /><circle cx="12" cy="12" r="7.5" fill="none" /></svg>
-          Back to <span id="recenter-name"></span>
+          Center on <span id="recenter-name"></span>
         </button>
         <ul class="legend" aria-label="Legend">
           <li><i class="sw sw-m"></i>Male</li>
@@ -37,22 +37,22 @@
           <li class="legend-cmp" id="legend-cmp" hidden><i class="sw sw-c"></i><span id="legend-cmp-name"></span></li>
           <li class="hint"><span class="hint-long">Drag to move, scroll or pinch to zoom, double-tap a country to open it</span><span class="hint-short">Drag, pinch, double-tap a country</span></li>
         </ul>
+        <div class="timeline" id="timeline">
+          <button type="button" class="play" id="play" aria-label="Play from this year">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path id="play-icon" d="M7 4.5v15l12.5-7.5z" /></svg>
+          </button>
+          <div class="slider">
+            <output class="year-bubble" id="year" for="slider">2023</output>
+            <input type="range" id="slider" min="1950" max="2100" step="1" value="2023" aria-label="Year" />
+            <div class="slider-scale" aria-hidden="true">
+              <span>1950</span><span>1975</span><span>2000</span><span class="is-split">2023</span><span>2050</span><span>2075</span><span>2100</span>
+            </div>
+          </div>
+        </div>
         <p class="status" id="status">Loading UN population data</p>
       </main>
 
-      <section class="dock" aria-label="Year and indicators">
-        <div class="time">
-          <button type="button" class="play" id="play" aria-label="Play from this year">
-            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path id="play-icon" d="M7 4.5v15l12.5-7.5z" /></svg>
-          </button>
-          <output class="year" id="year" for="slider">2023</output>
-          <span class="phase" id="phase">Estimate</span>
-        </div>
-        <div class="slider">
-          <input type="range" id="slider" min="1950" max="2100" step="1" value="2023" aria-label="Year" />
-          <div class="slider-scale" aria-hidden="true"><span>1950</span><span>2000</span><span>2050</span><span>2100</span></div>
-        </div>
-
+      <section class="dock" aria-label="Indicators and trends">
         <dl class="stats" id="stats">
           <div><dt>Population</dt><dd data-k="population"></dd></div>
           <div><dt>Median age</dt><dd data-k="medianAge"></dd></div>
@@ -60,6 +60,10 @@
           <div><dt>Life expectancy at birth</dt><dd data-k="e0"></dd></div>
           <div class="wide"><dt>People 65+ for every 100 aged 15–64</dt><dd data-k="oldAge"></dd></div>
         </dl>
+        <button type="button" class="details-btn" id="details-btn" aria-haspopup="dialog">
+          <span>Detailed statistics</span>
+          <small>Age tables, deaths, births and every year from 1950 to 2100</small>
+        </button>
 
         <section class="panel-block" aria-labelledby="trend-title">
           <h2 id="trend-title">Total population, 1950–2100</h2>
@@ -89,6 +93,7 @@
         </section>
 
         <nav class="panel-links" aria-label="More information">
+          <button type="button" class="link-btn" id="details-link">Detailed statistics</button>
           <a href="#about">About</a>
           <a href="#sources">Data sources</a>
           <a href="#contact">Contact</a>
@@ -173,6 +178,36 @@
       </div>
       <p class="site-foot" id="site-foot"></p>
     </footer>
+
+    <dialog class="details" id="details" aria-labelledby="details-title">
+      <div class="details-head">
+        <div>
+          <h2 id="details-title">Detailed statistics</h2>
+          <p class="muted" id="details-sub"></p>
+        </div>
+        <div class="details-year" role="group" aria-label="Year">
+          <button type="button" id="details-prev" aria-label="Previous year">−</button>
+          <input type="number" id="details-year" min="1950" max="2100" step="1" aria-label="Year" />
+          <button type="button" id="details-next" aria-label="Next year">+</button>
+        </div>
+        <button type="button" class="picker-close" id="details-close" aria-label="Close">×</button>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Statistics">
+        <button type="button" role="tab" data-tab="overview" aria-selected="true">Key indicators</button>
+        <button type="button" role="tab" data-tab="age" aria-selected="false">Age structure</button>
+        <button type="button" role="tab" data-tab="deaths" aria-selected="false">Deaths by age</button>
+        <button type="button" role="tab" data-tab="births" aria-selected="false">Births by age</button>
+        <button type="button" role="tab" data-tab="years" aria-selected="false">All years</button>
+      </div>
+      <div class="details-body" id="details-body" role="tabpanel"></div>
+      <div class="details-foot">
+        <p class="muted" id="details-note"></p>
+        <div class="details-actions">
+          <a id="details-verify" href="https://population.un.org/dataportal/" target="_blank" rel="noopener">Verify on the UN Data Portal</a>
+          <button type="button" class="csv-btn" id="details-csv">Download CSV</button>
+        </div>
+      </div>
+    </dialog>
 
     <dialog class="picker" id="picker" aria-labelledby="picker-title">
       <form method="dialog" class="picker-head">

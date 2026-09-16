@@ -101,9 +101,9 @@ export class Glyph {
   }
 
   /** Lay out for a stage of w x h CSS pixels, keeping clear of a header of height `top`. */
-  resize(w: number, h: number, top = 0) {
+  resize(w: number, h: number, top = 0, bottomReserve?: number) {
     this.svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    const bottom = w < 620 ? 54 : 34; // legend (two lines on phones)
+    const bottom = bottomReserve ?? (w < 620 ? 54 : 34); // legend and timeline
     const avail = Math.max(h - top - bottom, h * 0.55);
     // vertical budget: 3.6 units above the centre, 5.2 below (births arm, its title and the year)
     const u = Math.max(22, Math.min(avail / 8.8, w / 7.4, 120));

@@ -17,11 +17,13 @@ Years up to 2023 are UN estimates. Later years are the UN median projection and 
 - Compare mode: overlay a second place as outlines
 - Median age, births per woman, life expectancy and old-age dependency for every year
 - Explore the map freely: drag to move it (with momentum), scroll or pinch to zoom, double-click or double-tap any country to open its profile
-- The chart stays pinned to the selected country while you move the map; "Back to …" re-centres it
+- Double-click a country and the chart moves to it while the map stays still; "Center on …" centres the map on it
+- Year slider and play button under the map
 - Smooth transitions between years, places and comparisons
 - The year and whether it is a UN estimate or projection are shown under the chart
 - Total population chart for 1950–2100, with the comparison place overlaid
 - Population change for the last 5 years before the selected year, as people or growth %, with the official births, deaths and net migration behind each year
+- Detailed statistics: key indicators, age structure, deaths by age, births by mother's age and every year 1950–2100, with CSV download
 - A "Check these numbers on the UN Data Portal" link that opens the same figures on the UN website
 - About, lab, data sources and contact sections
 - Shareable links: the address updates with place, year and comparison, e.g. `#place=392&year=2060&vs=566`
@@ -56,6 +58,7 @@ scripts/make-standalone.mjs  optional single-file HTML build
 src/data.ts                loads the data pack, interpolates between years
 src/glyph.ts               draws the three-arm chart and the year label (SVG)
 src/charts.ts              population trend and 5-year change charts
+src/details.ts             detailed statistics dialog and CSV export
 src/site.ts                lab and contact details (edit this)
 src/map.ts                 draws the map; drag, inertia, zoom and fly-to (Canvas, d3-geo)
 src/main.ts                app state, controls, search, comparison, links

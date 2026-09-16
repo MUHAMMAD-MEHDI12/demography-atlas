@@ -169,6 +169,12 @@ def main() -> None:
 
     # spot checks against figures published by the UN (1 July population, thousands)
     published = {(156, 2023): 1422585, (356, 2023): 1438070, (900, 2023): 8091735, (586, 2023): 247504}
+    # person-level figures published from WPP 2024 by PopulationPyramid.net (independent check)
+    for (code, year), people in {(586, 2023): 247_504_496, (586, 2013): 211_073_978}.items():
+        got = pop_tot[idx[code], year - YEAR0] * 1000
+        print(f"  check {code} {year}: {got:,.1f} people vs {people:,} -> {'ok' if abs(got - people) <= 1 else 'MISMATCH'}")
+        if abs(got - people) > 1:
+            raise SystemExit("Person-level population check failed.")
     for (code, year), expected in published.items():
         got = pop_tot[idx[code], year - YEAR0]
         status = "ok" if abs(got - expected) < 1 else "MISMATCH"
@@ -210,10 +216,11 @@ def main() -> None:
                       for r in locs.itertuples()],
     }
     mj = json.dumps(meta, ensure_ascii=False, separators=(",", ":")).encode()
-    header = b"WPP5" + struct.pack("<HHHI", n_loc, n_year, record.shape[2], len(mj))
-    pad = b"\0" * ((-(len(header) + len(mj))) % 4)  # align binary section to 4 bytes
-    # six float32 series per location-year (thousands; growth in %), NaN where missing
-    annual = np.stack([pop_tot, births, deaths_tot, net_mig, pop_change, growth], axis=0).astype("<f4")
+    header = b"WPP6" + struct.pack("<HHHI", n_loc, n_year, record.shape[2], len(mj))
+    pad = b"\0" * ((-(len(header) + len(mj))) % 8)  # align binary section to 8 bytes
+    # six float64 series per location-year (thousands with the UN's 3 decimals, i.e. exact
+    # to the person; growth in %), NaN where missing
+    annual = np.stack([pop_tot, births, deaths_tot, net_mig, pop_change, growth], axis=0).astype("<f8")
     body = header + mj + pad + annual.tobytes() + delta.tobytes()
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_bytes(gzip.compress(body, 9))
