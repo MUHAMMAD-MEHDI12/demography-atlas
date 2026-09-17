@@ -288,21 +288,123 @@ def main() -> None:
 
     missing = set(dist_geo[~dist_geo.province_name.isin(["Azad Kashmir", "Gilgit Baltistan"])].district_name) - used
     assert not missing, f"OCHA districts not used: {missing}"
-    # AJK and Gilgit-Baltistan are not in the PBS census tables; drawn for context only
-    other = dist_geo[dist_geo.province_name.isin(["Azad Kashmir", "Gilgit Baltistan"])]
-    context = [{"id": -(i + 1), "name": n, "region": p, "geometry": g}
-               for i, (n, p, g) in enumerate(zip(other.district_name, other.province_name, other.geometry))]
+    guides = {sh["id"]: sh["geometry"] for sh in shapes}  # OCHA shapes, used only to split the supplied districts
 
-    gdf = gpd.GeoDataFrame(shapes + [{"id": c["id"], "geometry": c["geometry"]} for c in context], crs=4326)
-    topo = tp.Topology(gdf, prequantize=1e5, toposimplify=0.004, object_name="districts").to_dict()
+    # ---- Azad Jammu & Kashmir and Gilgit-Baltistan (not in the PBS district tables) ---------
+    # AJK: Census 2017 by sex and 2022 projection, AJ&K Bureau of Statistics, "AJ&K at a Glance 2023"
+    AJK = {"Muzaffarabad": (327_791, 323_298, 362_253, 356_772), "Neelum": (93_648, 96_117, 104_355, 107_108),
+           "Jhelum Valley": (113_348, 113_141, 122_999, 122_780), "Bagh": (176_935, 194_924, 194_704, 214_131),
+           "Haveli": (73_396, 72_815, 78_804, 78_174), "Poonch": (239_028, 260_743, 254_043, 276_896),
+           "Sudhnoti": (143_180, 154_653, 154_316, 166_664), "Kotli": (365_735, 408_222, 398_080, 443_957),
+           "Mirpur": (231_207, 225_285, 251_448, 244_996), "Bhimber": (202_361, 216_150, 220_847, 235_838)}
+    # district figures add up to the male and female totals printed in the same publication
+    assert sum(v[0] for v in AJK.values()) == 1_966_629 and sum(v[1] for v in AJK.values()) == 2_065_348
+    assert sum(v[2] for v in AJK.values()) == 2_141_849 and sum(v[3] for v in AJK.values()) == 2_247_316
+    # GB: population 2023 and area, Planning & Development Department GB, "Gilgit-Baltistan at a Glance 2024"
+    GB = {"Ghanche": (157_822, 8531, ["Ghanche"]), "Shigar": (84_608, 4173, ["Shigar"]), "Kharmang": (61_304, 6144, ["Kharmang"]),
+          "Skardu": (278_885, 10168, ["Skardu", "Rondu"]), "Gilgit": (324_552, 4208, ["Gilgit"]), "Ghizer": (200_069, 12381, ["Ghizer", "Gupis-Yasin"]),
+          "Hunza": (65_497, 10109, ["Hunza"]), "Nagar": (87_410, 4137, ["Nagar"]), "Diamer": (337_329, 7234, ["Diamir", "Darel", "Tangir"]),
+          "Astore": (111_573, 5411, ["Astore"])}
+    blank = {"male": None, "female": None, "transgender": None, "area": None, "density": None, "sexRatio": None, "urbanPct": None,
+             "urban": None, "rural": None, "pop2017": None, "growth": None, "age": None, "tehsils": []}
+    next_id = len(units) + 1
+    for name, (m17, f17, m22, f22) in AJK.items():
+        units.append({**blank, "id": next_id, "key": name.upper(), "name": name, "province": "Azad Jammu and Kashmir", "division": "", "kind": "ajk",
+                      "population": m22 + f22, "male": m22, "female": f22, "popYear": 2022, "popLabel": "Projected population, 2022",
+                      "pop2017": m17 + f17, "sexRatio": round(m22 / f22 * 100, 1),
+                      "source": "AJ&K Bureau of Statistics, P&D Department, AJ&K at a Glance 2023 (Census 2017 and 2022 projection)",
+                      "note": "Not part of the PBS census 2023 district tables. Population, males and females are the 2022 projection of the AJ&K Bureau of Statistics; the 2017 population is from Census 2017. Age and rural or urban data by district not available."})
+        sel = dist_geo[(dist_geo.province_name == "Azad Kashmir") & (dist_geo.district_name == name)]
+        assert len(sel) == 1, name
+        guides[next_id] = sel.geometry.union_all()
+        next_id += 1
+    for name, (p23, area, parts) in GB.items():
+        units.append({**blank, "id": next_id, "key": name.upper(), "name": name, "province": "Gilgit-Baltistan", "division": "", "kind": "gb",
+                      "population": p23, "popYear": 2023, "popLabel": "Population, 2023", "area": area, "density": round(p23 / area, 1),
+                      "source": "Planning & Development Department, Government of Gilgit-Baltistan, Gilgit-Baltistan at a Glance 2024",
+                      "note": "Not part of the PBS census 2023 district tables. Population and area from the GB Planning & Development Department. Age, sex and rural or urban data not available."})
+        sel = dist_geo[(dist_geo.province_name == "Gilgit Baltistan") & dist_geo.district_name.isin(parts)]
+        assert len(sel) == len(parts), (name, parts)
+        guides[next_id] = sel.geometry.union_all()
+        next_id += 1
+
+    # ---- conform to the boundary files supplied by the site owner ---------------------------
+    # National and district boundaries: pipeline/boundaries/gadm41_PAK_0 and _3 (GADM 4.1).
+    # Where one of those districts now holds several districts, it is split along the OCHA lines.
+    from shapely import STRtree, make_valid
+    from shapely.ops import unary_union
+    bdir = Path(__file__).resolve().parent / "boundaries"
+    g0 = gpd.read_file(bdir / "gadm41_PAK_0.shp").to_crs(4326)
+    g3 = gpd.read_file(bdir / "gadm41_PAK_3.shp").to_crs(4326)
+    national = make_valid(g0.union_all())
+    ids = list(guides)
+    gshapes = [make_valid(guides[i]).intersection(national) for i in ids]
+    tree = STRtree(gshapes)
+    eq = lambda geom: gpd.GeoSeries([geom], crs=4326).to_crs(6933).area.iloc[0]
+    garea = {i: eq(g) for i, g in zip(ids, gshapes)}
+    pieces = {i: [] for i in ids}
+    for poly in g3.geometry:
+        poly = make_valid(poly)
+        pa = eq(poly)
+        ov = []
+        for j in tree.query(poly):
+            inter = poly.intersection(gshapes[j])
+            if not inter.is_empty:
+                ov.append((ids[j], inter, eq(inter)))
+        if not ov:
+            continue
+        present = [(i, g, a) for i, g, a in ov if a > 0.12 * pa or a > 0.5 * garea[i]]
+        if len(present) <= 1:
+            owner = present[0][0] if present else max(ov, key=lambda t: t[2])[0]
+            pieces[owner].append(poly)
+            continue
+        taken = unary_union([g for _, g, _ in present])
+        for i, g, _ in present:
+            pieces[i].append(g)
+        rest = poly.difference(taken)
+        for part in getattr(rest, "geoms", [rest]):
+            if part.is_empty or part.area == 0:
+                continue
+            nearest = min(present, key=lambda t: part.distance(t[1]))
+            pieces[nearest[0]].append(part)
+    final = {i: make_valid(unary_union(pieces[i])) for i in ids}
+    empty = [next(u["name"] for u in units if u["id"] == i) for i in ids if final[i].is_empty]
+    assert not empty, f"districts without a shape: {empty}"
+    names_by_id = {u["id"]: u["name"] for u in units}
+    ratio = {i: eq(final[i]) / garea[i] for i in ids}
+    odd = {names_by_id[i]: round(r, 2) for i, r in ratio.items() if r < 0.6 or r > 1.6}
+    print(f"  conformed {len(ids)} districts to the supplied boundaries; area ratio outside 0.6-1.6 for: {odd}")
+
+    # Indian Occupied Kashmir from the supplied kashmir shapefile (no population data available)
+    ksh = gpd.read_file(bdir / "kashmir.shp").to_crs(4326)
+    iok = make_valid(ksh[ksh.Name.str.contains("Occupied", case=False)].union_all()).difference(national)
+    iok_id = next_id
+    units.append({**blank, "id": iok_id, "key": "IOK", "name": "Indian Occupied Kashmir", "province": "Jammu and Kashmir (disputed)", "division": "",
+                  "kind": "iok", "population": None, "popYear": None, "popLabel": "Population",
+                  "source": "Boundary from the supplied kashmir shapefile", "note": "Data not available."})
+    final[iok_id] = iok
+
+    shapes = []
+    for u in units:
+        shape = final[u["id"]]
+        shapes.append({"id": u["id"], "geometry": shape})
+        c = gpd.GeoSeries([shape], crs=4326).to_crs(32642).centroid.to_crs(4326).iloc[0]
+        pt = c if shape.contains(c) else shape.representative_point()
+        minx, miny, maxx, maxy = shape.bounds
+        u["center"] = [round(pt.x, 3), round(pt.y, 3)]
+        u["bounds"] = [round(minx, 3), round(miny, 3), round(maxx, 3), round(maxy, 3)]
+    context = []
+    gdf = gpd.GeoDataFrame(shapes, crs=4326)
+    topo = tp.Topology(gdf, prequantize=1e5, toposimplify=0.003, object_name="districts").to_dict()
+    outline = tp.Topology(gpd.GeoDataFrame([{"id": 0, "geometry": national}], crs=4326), prequantize=1e5, toposimplify=0.003, object_name="pakistan").to_dict()
 
     out = {
         "source": {
             "census": "Pakistan Bureau of Statistics, 7th Population and Housing Census 2023 (Tables 1, 4 and 5)",
             "censusUrl": "https://www.pbs.gov.pk/",
             "tables": "PakPC2023 R package (CRAN), machine-readable PBS census tables",
-            "boundaries": "UN OCHA COD-AB Pakistan administrative boundaries (via the pkmapr R package)",
-            "boundariesUrl": "https://data.humdata.org/dataset/cod-ab-pak",
+            "boundaries": "National and district boundaries from the files supplied by the site owner (GADM 4.1); districts created since then are split along UN OCHA boundaries; Indian Occupied Kashmir from the supplied kashmir shapefile",
+            "boundariesUrl": "https://gadm.org/",
             "fixes": [
                 "Chowk Sarwar Shaheed tehsil (Muzaffargarh) relabelled; it appears as a second 'Alipur' in the machine-readable table.",
                 "Tando Muhammad Khan taluka added from the PBS Sindh Table 1 PDF; it is missing in the machine-readable table.",
@@ -315,10 +417,13 @@ def main() -> None:
         "units": units,
         "context": [{"id": c["id"], "name": c["name"], "region": c["region"]} for c in context],
         "topology": topo,
+        "outline": outline,
     }
     path = ROOT / "public" / "data" / "pakistan.json"
     path.write_text(json.dumps(out, separators=(",", ":")))
     kinds = pd.Series([u["kind"] for u in units]).value_counts().to_dict()
+    assert sum(u["population"] for u in units if u["kind"] in ("census", "new", "reduced", "merged")) == PUBLISHED_TOTAL
+    assert sum(u["population"] for u in units if u["kind"] == "gb") == 1_709_049  # GB total in the same publication
     print(f"wrote {path} ({path.stat().st_size / 1e6:.2f} MB): {len(units)} districts {kinds}")
 
 

@@ -48,7 +48,14 @@
           <li class="legend-cmp" id="legend-cmp" hidden><i class="sw sw-c"></i><span id="legend-cmp-name"></span></li>
           <li class="hint"><span class="hint-long">Grab the triangle and drop it on any district, or click a district. Drag the map to move it.</span><span class="hint-short">Drag the triangle onto a district</span></li>
         </ul>
-        <p class="status" id="status">Loading census data</p>
+        <div class="loading" id="status" role="status">
+          <svg viewBox="0 0 64 58" width="64" height="58" aria-hidden="true">
+            <polygon class="ld-bg" points="32,5 59,52 5,52" />
+            <polygon class="ld-tri" points="32,5 59,52 5,52" />
+            <circle class="ld-dot" cx="32" cy="36" r="4" />
+          </svg>
+          <p>Loading census data</p>
+        </div>
       </main>
 
       <section class="dock" aria-label="District figures">
@@ -65,7 +72,7 @@
         </dl>
         <button type="button" class="details-btn" id="details-btn" aria-haspopup="dialog">
           <span>Detailed statistics</span>
-          <small>Age tables for this district and a sortable table of all 140 districts</small>
+          <small>Age tables for this district and a sortable table of every district</small>
         </button>
 
         <section class="panel-block" aria-labelledby="colour-title">
@@ -135,7 +142,10 @@
                 <tr><td>Population, sex, area, urban and rural population, 2017 population, growth</td><td>Table 1 (district and tehsil)</td><td>As published; districts made of several tehsils are added up</td></tr>
                 <tr><td>Age charts for census districts</td><td>Table 4, single years of age by sex, rural and urban</td><td>Grouped into 5-year ages and shown as shares</td></tr>
                 <tr><td>Age charts for districts created after the census</td><td>Table 5, broad age groups by tehsil</td><td>Ages 0–4, 5–14, 15–64 and 65+, each spread evenly over its 5-year rows</td></tr>
-                <tr><td>District boundaries</td><td>UN OCHA administrative boundaries</td><td>For the map only</td></tr>
+                <tr><td>Azad Jammu and Kashmir districts</td><td>AJ&amp;K Bureau of Statistics, "AJ&amp;K at a Glance 2023"</td><td>2022 projection by sex and 2017 census population; no age table published</td></tr>
+                <tr><td>Gilgit-Baltistan districts</td><td>Planning &amp; Development Department, Gilgit-Baltistan</td><td>Population and area; no age, sex or rural and urban table published</td></tr>
+                <tr><td>Indian Occupied Kashmir</td><td>No source with comparable figures</td><td>Outline only, marked "Data not available"</td></tr>
+                <tr><td>National, district and Kashmir boundaries</td><td>Boundary files supplied by GeoScape Analytics Lab</td><td>For the map only; districts that the file does not separate are split along UN OCHA lines</td></tr>
               </tbody>
             </table>
           </div>
@@ -198,7 +208,7 @@
         <h2 id="picker-title">Choose a district</h2>
         <button class="picker-close" aria-label="Close">×</button>
       </form>
-      <input type="search" id="picker-input" placeholder="Search 140 districts" autocomplete="off" />
+      <input type="search" id="picker-input" placeholder="Search districts and tehsils" autocomplete="off" />
       <ul class="picker-list" id="picker-list"></ul>
     </dialog>
 

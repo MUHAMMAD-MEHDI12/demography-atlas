@@ -8,7 +8,7 @@ export interface TourStop {
   go: () => number;
 }
 
-const STEP_MS = 1500; // time on each place, flight included
+const STEP_MS = 2500; // time on each place, flight included
 
 export class Tour {
   running = false;

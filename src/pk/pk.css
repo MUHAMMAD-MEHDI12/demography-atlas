@@ -26,6 +26,16 @@
   will-change: transform;
   text-shadow: 0 0 4px var(--ocean), 0 0 8px var(--ocean);
 }
+#glyph.is-no-age .g-empty,
+#glyph.is-no-age .g-age {
+  display: none;
+}
+.census-badge.is-empty .cb-title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--ink-2);
+}
 .cb-title {
   font-weight: 600;
   font-size: 22px;

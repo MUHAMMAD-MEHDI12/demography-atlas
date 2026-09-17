@@ -6,8 +6,8 @@
   --ink: #16252e;
   --ink-2: #52636b;
   --panel: #fbfcfb;
-  --male: #2c6c9c;
-  --female: #ad3f76;
+  --male: #41639f;
+  --female: #cd4f7e;
   --highlight: #e2a93a;
   --gain: #2d7a5a;
   --loss: #b8472e;
@@ -24,8 +24,8 @@
     --ink: #e3ebee;
     --ink-2: #92a4ac;
     --panel: #111d22;
-    --male: #6aa5d6;
-    --female: #e07bae;
+    --male: #86a6e8;
+    --female: #f07fa8;
     --highlight: #d9a843;
     --gain: #5dbb8f;
     --loss: #e5805f;
@@ -39,8 +39,8 @@
   --ink: #e3ebee;
   --ink-2: #92a4ac;
   --panel: #111d22;
-  --male: #6aa5d6;
-  --female: #e07bae;
+  --male: #86a6e8;
+  --female: #f07fa8;
   --highlight: #d9a843;
   --gain: #5dbb8f;
   --loss: #e5805f;
@@ -415,12 +415,9 @@ button {
   font-weight: 500;
 }
 .search-name mark {
-  background: none;
+  background: color-mix(in srgb, var(--male) 16%, transparent);
+  border-radius: 3px;
   color: inherit;
-  text-decoration: underline;
-  text-decoration-color: var(--highlight);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
 }
 .search-alias {
   color: var(--ink-2);
@@ -659,6 +656,7 @@ button {
   top: 0;
   left: 0;
   z-index: 2;
+  pointer-events: none; /* only the controls take clicks, so buttons behind stay usable */
   display: grid;
   justify-items: center;
   gap: 2px;
@@ -677,6 +675,12 @@ button {
   line-height: 1.1;
   paint-order: stroke;
   text-shadow: 0 0 4px var(--ocean), 0 0 8px var(--ocean);
+}
+.yp-play,
+.yp-strip,
+.yp-label,
+.yp-phase {
+  pointer-events: auto;
 }
 .yp-row {
   display: flex;
@@ -866,15 +870,72 @@ button {
   font-style: italic;
   font-weight: 500;
 }
-.status {
+.loading {
   position: absolute;
   inset: 0;
+  z-index: 5;
   display: grid;
-  place-items: center;
-  margin: 0;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
   padding: 24px;
   text-align: center;
+  background: var(--ocean);
   color: var(--ink-2);
+}
+.loading p {
+  margin: 0;
+  font-size: 14px;
+  animation: ld-fade 1.6s ease-in-out infinite;
+}
+.ld-bg {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  opacity: 0.22;
+}
+.ld-tri {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-dasharray: 52 110;
+  animation: ld-trace 1.6s linear infinite;
+}
+.ld-dot {
+  fill: var(--female);
+  animation: ld-pulse 1.8s ease-in-out infinite;
+}
+@keyframes ld-trace {
+  to {
+    stroke-dashoffset: -162;
+  }
+}
+@keyframes ld-pulse {
+  0%, 100% {
+    r: 3;
+    opacity: 0.5;
+  }
+  50% {
+    r: 6;
+    opacity: 1;
+  }
+}
+@keyframes ld-fade {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ld-tri,
+  .ld-dot,
+  .loading p {
+    animation: none;
+  }
 }
 
 /* ---------- dock -------------------------------------------------------------- */
@@ -890,7 +951,7 @@ button {
 .stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px 16px;
+  gap: 10px;
   margin: 20px 0 0;
   padding: 16px 0 0;
   border-top: 1px solid var(--rule);
@@ -898,8 +959,14 @@ button {
 .stats .wide {
   grid-column: 1 / -1;
 }
+.stats > div {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--land);
+}
 .stats dt {
-  font-size: 13px;
+  font-size: 12.5px;
+  line-height: 1.25;
   color: var(--ink-2);
 }
 .stats dd {
@@ -907,7 +974,8 @@ button {
   margin: 0;
 }
 .stats .v {
-  font-size: 22px;
+  margin-top: 2px;
+  font-size: 23px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -916,8 +984,6 @@ button {
   font-size: 13px;
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
-  text-decoration: underline dashed var(--border) 1px;
-  text-underline-offset: 3px;
 }
 .source {
   margin: 20px 0 0;
@@ -1035,8 +1101,7 @@ button {
   background: none;
   font-size: 14px;
   text-decoration: underline;
-  text-decoration-color: var(--highlight);
-  text-decoration-thickness: 2px;
+  text-decoration-color: color-mix(in srgb, var(--ink) 35%, transparent);
   text-underline-offset: 3px;
 }
 .details {
@@ -1136,7 +1201,7 @@ button {
 }
 .tabs button[aria-selected="true"] {
   color: var(--ink);
-  border-bottom-color: var(--highlight);
+  border-bottom-color: var(--ink);
 }
 .details-body {
   flex: 1;
@@ -1299,7 +1364,10 @@ button {
 }
 .chart-readout {
   min-height: 2.7em;
-  margin: 0 0 4px;
+  margin: 0 0 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--land);
   font-size: 13px;
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
@@ -1317,6 +1385,7 @@ button {
 }
 .c-grid {
   stroke: var(--rule);
+  stroke-dasharray: 2 3;
 }
 .c-zero {
   stroke: var(--ink-2);
@@ -1334,14 +1403,22 @@ button {
   font-size: 10px;
 }
 .c-area {
-  fill: var(--male);
-  opacity: 0.14;
+  fill: url(#pop-grad);
+}
+#pop-grad stop:first-child {
+  stop-color: var(--male);
+  stop-opacity: 0.38;
+}
+#pop-grad stop:last-child {
+  stop-color: var(--male);
+  stop-opacity: 0.02;
 }
 .c-line {
   fill: none;
   stroke: var(--male);
-  stroke-width: 2;
+  stroke-width: 2.4;
   stroke-linejoin: round;
+  stroke-linecap: round;
 }
 .c-line-b {
   stroke: var(--ink);
@@ -1353,11 +1430,13 @@ button {
 .c-marker {
   stroke: var(--highlight);
   stroke-width: 1.5;
+  stroke-dasharray: 3 2;
 }
 .c-dot {
   fill: var(--male);
   stroke: var(--panel);
-  stroke-width: 2;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 1px 3px rgb(10 30 40 / 0.35));
 }
 .c-dot-b {
   fill: var(--ink);
@@ -1441,8 +1520,8 @@ button {
 }
 a {
   color: var(--ink);
-  text-decoration-color: var(--highlight);
-  text-decoration-thickness: 2px;
+  text-decoration-color: color-mix(in srgb, var(--ink) 35%, transparent);
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 a:hover {

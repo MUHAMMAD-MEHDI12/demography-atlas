@@ -17,26 +17,30 @@ export interface District {
   name: string;
   province: string;
   division: string;
-  kind: "census" | "new" | "reduced" | "merged";
+  kind: "census" | "new" | "reduced" | "merged" | "ajk" | "gb" | "iok";
+  popLabel?: string;
+  popYear?: number;
+  source?: string;
   parent?: string;
   parts?: string[];
   note?: string;
   tehsils: string[];
-  population: number;
-  male: number;
-  female: number;
-  transgender: number;
-  area: number;
+  population: number | null;
+  male: number | null;
+  female: number | null;
+  transgender: number | null;
+  area: number | null;
   density: number | null;
-  sexRatio: number;
-  urbanPct: number;
-  urban: number;
-  rural: number;
-  pop2017: number;
+  sexRatio: number | null;
+  urbanPct: number | null;
+  urban: number | null;
+  rural: number | null;
+  pop2017: number | null;
   growth: number | null;
   center: [number, number];
   bounds: [number, number, number, number];
-  age: { detail: "5-year" | "broad"; overall: AgeShares; urban: AgeShares; rural: AgeShares };
+  /** null where no age table is published (AJK, Gilgit-Baltistan, Occupied Kashmir) */
+  age: { detail: "5-year" | "broad"; overall: AgeShares; urban: AgeShares; rural: AgeShares } | null;
 }
 
 export interface PakistanData {
@@ -93,6 +97,9 @@ export function value(d: District, key: Indicator): number {
   const v = d[key];
   return typeof v === "number" ? v : NaN;
 }
+
+/** Districts with a full PBS age table. */
+export const hasAge = (d: District) => d.age !== null;
 
 /** Quantile class breaks (6 classes) so every colour holds about the same number of districts. */
 export function breaks(units: District[], key: Indicator, classes = 6): number[] {

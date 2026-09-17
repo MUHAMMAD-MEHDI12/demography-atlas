@@ -2,7 +2,8 @@ import "./styles.css";
 import { Dataset, emptyProfile, oldAgeDependency, type Place, type Profile } from "./data";
 import { Glyph, worldArms, profileArms, type ReadoutRow } from "./glyph";
 import { ChartMotion } from "./motion";
-import { WorldMap, type WorldData } from "./map";
+import { WorldMap, type WorldData, type MapExtras } from "./map";
+import { loadPkGeo } from "./pkgeo";
 import { formatPopulation, fmt, pct, compact } from "./format";
 import { PopulationChart, ChangeChart, type ChangeMode } from "./charts";
 import { SITE } from "./site";
@@ -60,7 +61,7 @@ class App {
   private chartDrag: { dx: number; dy: number; id: number } | null = null;
   private chartMoved = false;
 
-  constructor(private data: Dataset, world: WorldData) {
+  constructor(private data: Dataset, world: WorldData, extras: MapExtras) {
     const hash = new URLSearchParams(location.hash.slice(1));
     this.primary = data.byCode(Number(hash.get("place"))) ?? data.byCode(586)!; // Pakistan by default
     this.compare = data.byCode(Number(hash.get("vs"))) ?? null;
@@ -81,7 +82,7 @@ class App {
         this.yearPicker?.place(x, y + this.glyph.pickerOffset);
       }
       $("recenter").hidden = !offHome;
-    });
+    }, undefined, extras);
 
     this.popChart = new PopulationChart($("pop-chart"), data.yearStart, data.lastEstimate);
     this.changeChart = new ChangeChart($("change-chart"), data.lastEstimate);
@@ -133,7 +134,7 @@ class App {
             go: () => {
               this.setPlaying(false);
               this.compare = null;
-              this.flightMs = 1100;
+              this.flightMs = 1500;
               this.setPrimary(p);
               this.flightMs = undefined;
               return this.map.lastFlightMs;
@@ -376,7 +377,7 @@ class App {
         return li;
       }),
     );
-    $("site-foot").textContent = `Demography Atlas by ${lab.name}. Code under the MIT License. Data © United Nations, CC BY 3.0 IGO.`;
+    $("site-foot").textContent = `HumanScape by ${lab.name}. Data © United Nations, CC BY 3.0 IGO.`;
   }
 
   private writeHash(y: number) {
@@ -520,7 +521,7 @@ class App {
       }
       if (pinch && pointers.size === 2) {
         const now = pinchState();
-        this.map.panBy(pinch.mx - now.mx, pinch.my - now.my);
+        this.map.panBy(now.mx - pinch.mx, now.my - pinch.my);
         this.map.zoomAt(now.dist / pinch.dist, now.mx, now.my, true);
         pinch = now;
         return;
@@ -535,7 +536,7 @@ class App {
         const now = performance.now();
         const dtm = Math.max(now - drag.t, 1);
         const dx = p.x - prev.x, dy = p.y - prev.y;
-        this.map.panBy(-dx, -dy);
+        this.map.panBy(dx, dy);
         // smoothed velocity for the fling
         drag.vx = drag.vx * 0.6 + (dx / dtm) * 0.4;
         drag.vy = drag.vy * 0.6 + (dy / dtm) * 0.4;
@@ -701,8 +702,8 @@ class App {
   }
 }
 
-Promise.all([Dataset.load(), loadWorld()])
-  .then(([data, world]) => new App(data, world))
+Promise.all([Dataset.load(), loadWorld(), loadPkGeo()])
+  .then(([data, world, extras]) => new App(data, world, extras))
   .catch((err: Error) => {
     $("status").textContent = `${err.message} Reload the page to try again.`;
     console.error(err);

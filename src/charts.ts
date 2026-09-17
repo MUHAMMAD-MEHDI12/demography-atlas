@@ -73,7 +73,7 @@ export class PopulationChart {
     };
     const area = (s: Float64Array) => `${line(s, 0, n - 1)}L${X(n - 1)},${y1}L${X(0)},${y1}Z`;
 
-    let g = "";
+    let g = `<defs><linearGradient id="pop-grad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" /><stop offset="1" /></linearGradient></defs>`;
     for (let k = 0; k <= 4; k++) {
       const v = (top * k) / 4;
       g += `<line class="c-grid" x1="${x0}" x2="${x1}" y1="${Y(v)}" y2="${Y(v)}"/>`;
@@ -165,7 +165,7 @@ export class ChangeChart {
         if (!Number.isFinite(v)) return "";
         const y = Math.min(Y(v), Y(0));
         const hgt = Math.max(Math.abs(Y(v) - Y(0)), 1);
-        return `<rect class="c-bar ${v < 0 ? "is-loss" : "is-gain"}${cls}${proj}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${hgt.toFixed(1)}" rx="2"/>`;
+        return `<rect class="c-bar ${v < 0 ? "is-loss" : "is-gain"}${cls}${proj}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${hgt.toFixed(1)}" rx="3"/>`;
       };
       const va = this.value(r, mode);
       if (b) {

@@ -46,8 +46,13 @@ const emptyValues = (): ArmValues => ({
 
 function valuesOf(d: District, out: ArmValues) {
   for (const k of ["overall", "urban", "rural"] as const) {
-    out[k][0].set(d.age[k].m);
-    out[k][1].set(d.age[k].f);
+    if (d.age) {
+      out[k][0].set(d.age[k].m);
+      out[k][1].set(d.age[k].f);
+    } else {
+      out[k][0].fill(0);
+      out[k][1].fill(0);
+    }
   }
 }
 
@@ -82,7 +87,7 @@ class PakistanApp {
   constructor(private data: PakistanData, world: WorldData) {
     this.units = data.units;
     for (const u of this.units) this.byId.set(u.id, u);
-    [...this.units].sort((a, b) => b.population - a.population).forEach((u, i) => this.rankByPop.set(u.id, i + 1));
+    [...this.units].sort((a, b) => (b.population ?? -1) - (a.population ?? -1)).forEach((u, i) => this.rankByPop.set(u.id, i + 1));
 
     const hash = new URLSearchParams(location.hash.slice(1));
     const find = (s: string | null) => (s ? this.units.find((u) => slug(u.name) === s) : undefined);
@@ -145,14 +150,15 @@ class PakistanApp {
       $("tour-caption"),
       () =>
         [...this.units]
-          .sort((a, b) => b.population - a.population)
+          .filter((u) => u.population !== null)
+          .sort((a, b) => (b.population ?? 0) - (a.population ?? 0))
           .slice(0, 10)
           .map((u) => ({
             title: u.name,
-            detail: `${compact(u.population, true)} people, ${u.province}`,
+            detail: `${compact(u.population ?? NaN, true)} people, ${u.province}`,
             go: () => {
               this.compare = null;
-              this.flightMs = 1100;
+              this.flightMs = 1500;
               this.setPrimary(u, "fly");
               this.flightMs = undefined;
               return this.map.lastFlightMs;
@@ -189,14 +195,22 @@ class PakistanApp {
   private update(animate: boolean, stay = false) {
     const p = this.primary, c = this.compare;
     $("place-name").textContent = p.name;
-    $("place-region").textContent = `${p.division} division, ${p.province}`;
+    $("place-region").textContent = p.division ? `${p.division} division, ${p.province}` : p.province;
     $("recenter-name").textContent = p.name;
     $("compare-btn").textContent = c ? `vs ${c.name}` : "Compare";
     $("compare-btn").classList.toggle("is-on", !!c);
     $("compare-clear").hidden = !c;
     $("legend-cmp").hidden = !c;
     $("legend-cmp-name").textContent = c?.name ?? "";
-    $("census-sub").textContent = p.age.detail === "broad" ? "Broad age groups from tehsil tables" : "Pakistan Bureau of Statistics";
+    const badge = $("census-badge");
+    badge.classList.toggle("is-empty", !p.age);
+    this.glyph.svg.classList.toggle("is-no-age", !p.age);
+    (badge.querySelector(".cb-title") as HTMLElement).textContent = p.age ? `Census ${p.popYear ?? 2023}` : "Age data not available";
+    (badge.querySelector(".cb-sub") as HTMLElement).textContent = !p.age
+      ? `${p.name}: no age table is published`
+      : p.age.detail === "broad"
+        ? "Broad age groups from tehsil tables"
+        : "Pakistan Bureau of Statistics";
     valuesOf(p, this.target);
     if (c) valuesOf(c, this.cmpTarget);
     this.map.select(p.id, c?.id ?? null, (id) => [id], animate && !reducedMotion.matches, stay, this.flightMs);
@@ -291,32 +305,35 @@ class PakistanApp {
   private renderStats() {
     const a = this.primary, b = this.compare;
     const rows: Record<string, (u: District) => string> = {
-      population: (u) => compact(u.population, true),
+      population: (u) => (u.population === null ? "not available" : `${compact(u.population, true)}${u.popYear && u.popYear !== 2023 ? ` (${u.popYear})` : ""}`),
       growth: (u) => (u.growth === null ? "no data" : `${u.growth > 0 ? "+" : ""}${fmt(u.growth, 2)}%`),
-      area: (u) => `${int(u.area)} km²`,
+      area: (u) => (u.area === null ? "not available" : `${int(u.area)} km²`),
       density: (u) => int(u.density),
-      urbanPct: (u) => `${fmt(u.urbanPct, 1)}%`,
-      sexRatio: (u) => fmt(u.sexRatio, 1),
-      pop2017: (u) => compact(u.pop2017, true),
-      rank: (u) => `${this.rankByPop.get(u.id)} of ${this.units.length}`,
+      urbanPct: (u) => (u.urbanPct === null ? "not available" : `${fmt(u.urbanPct, 1)}%`),
+      sexRatio: (u) => (u.sexRatio === null ? "not available" : fmt(u.sexRatio, 1)),
+      pop2017: (u) => (u.pop2017 === null ? "not available" : compact(u.pop2017, true)),
+      rank: (u) => (u.population === null ? "not available" : `${this.rankByPop.get(u.id)} of ${this.units.filter((x) => x.population !== null).length}`),
     };
     for (const dd of document.querySelectorAll<HTMLElement>("#stats dd")) {
       const f = rows[dd.dataset.k!];
       dd.innerHTML = `<span class="v">${f(a)}</span>${b ? `<span class="c">${esc(b.name)}: ${f(b)}</span>` : ""}`;
     }
     const note = $("kind-note");
-    note.hidden = !a.note;
-    note.textContent = a.note ?? "";
+    const text = [a.note, a.source ? `Source: ${a.source}.` : ""].filter(Boolean).join(" ");
+    note.hidden = !text;
+    note.textContent = text;
     $("tehsils").textContent = a.tehsils.join(", ");
     $("tehsil-title").textContent = `Tehsils of ${a.name}`;
   }
 
   private renderRanking() {
     const info = INDICATORS[this.indicator];
-    const list = this.units.filter((u) => u.province === this.primary.province).sort((x, y) => value(y, this.indicator) - value(x, this.indicator));
+    const list = this.units
+      .filter((u) => u.province === this.primary.province && Number.isFinite(value(u, this.indicator)))
+      .sort((x, y) => value(y, this.indicator) - value(x, this.indicator));
     const max = Math.max(...list.map((u) => Math.abs(value(u, this.indicator))));
     $("rank-title").textContent = `${this.primary.province}: ${info.label.toLowerCase()}`;
-    $("rank-sub").textContent = `${list.length} districts, highest first. Tap one to open it.`;
+    $("rank-sub").textContent = list.length ? `${list.length} districts, highest first. Tap one to open it.` : "No figures published for this area.";
     const f = (u: District) => {
       const v = value(u, this.indicator);
       if (this.indicator === "population") return compact(v);
@@ -342,9 +359,19 @@ class PakistanApp {
     const body = $("details-body");
     if (this.detailsTab === "district") {
       $("details-sub").textContent = `${u.name}, ${u.province}, Census 2023`;
-      const broad = u.age.detail === "broad";
+      if (!u.age) {
+        const factsOnly: [string, string][] = [["Population", int(u.population)], ["Area (km²)", int(u.area)], ["People per km²", u.density === null ? "no data" : fmt(u.density, 1)], ["Population in 2017", int(u.pop2017)]];
+        body.innerHTML = `<h3 class="d-title">${esc(u.name)}</h3><p class="muted d-sub">${esc(u.note ?? "")}</p>
+          <div class="table-wrap"><table class="d-table"><tbody>${factsOnly.map(([k, v]) => `<tr><th scope="row">${k}</th><td class="num">${v}</td></tr>`).join("")}</tbody></table></div>
+          <p class="muted d-sub" style="margin-top:14px">No age or sex table is published for this area, so the age charts are empty.</p>`;
+        this.csv = { name: `${slug(u.name)}.csv`, rows: [["Indicator", "Value"], ...factsOnly.map(([k, v]) => [k, v.replace(/,/g, "")])] };
+        $("details-note").textContent = `Source: ${u.source ?? "see the data sources section"}.`;
+        return;
+      }
+      const broad = u.age!.detail === "broad";
       const labels = broad ? this.data.broadLabels : this.data.ageLabels;
-      const pick = (reg: "overall" | "urban" | "rural", sex: "m" | "f", i: number) => (broad ? u.age[reg].bands![sex][i] : u.age[reg][sex][i]);
+      const age = u.age!;
+      const pick = (reg: "overall" | "urban" | "rural", sex: "m" | "f", i: number) => (broad ? age[reg].bands![sex][i] : age[reg][sex][i]);
       const rows = labels
         .map((lab, i) => `<tr><th scope="row">${lab}</th>${(["overall", "urban", "rural"] as const).map((r) => `<td class="num">${fmt(pick(r, "m", i), 2)}</td><td class="num">${fmt(pick(r, "f", i), 2)}</td>`).join("")}</tr>`)
         .reverse()
@@ -352,7 +379,7 @@ class PakistanApp {
       const facts: [string, string][] = [
         ["Population", int(u.population)], ["Male", int(u.male)], ["Female", int(u.female)], ["Transgender", int(u.transgender)],
         ["Urban", int(u.urban)], ["Rural", int(u.rural)], ["Area (km²)", int(u.area)], ["People per km²", u.density === null ? "no data" : fmt(u.density, 1)],
-        ["Males per 100 females", fmt(u.sexRatio, 2)], ["Population in 2017", int(u.pop2017)], ["Growth per year, 2017–2023 (%)", u.growth === null ? "no data" : fmt(u.growth, 2)],
+        ["Males per 100 females", u.sexRatio === null ? "no data" : fmt(u.sexRatio, 2)], ["Population in 2017", int(u.pop2017)], ["Growth per year, 2017–2023 (%)", u.growth === null ? "no data" : fmt(u.growth, 2)],
       ];
       body.innerHTML = `<h3 class="d-title">${esc(u.name)}</h3>${u.note ? `<p class="muted d-sub">${esc(u.note)}</p>` : ""}
         <div class="table-wrap"><table class="d-table"><tbody>${facts.map(([k, v]) => `<tr><th scope="row">${k}</th><td class="num">${v}</td></tr>`).join("")}</tbody></table></div>
@@ -370,11 +397,11 @@ class PakistanApp {
       };
       $("details-note").textContent = `Source: PBS Census 2023. Totals from Table 1; age shares from Table ${broad ? "5 (broad groups by tehsil)" : "4 (single years of age, grouped)"}.`;
     } else {
-      $("details-sub").textContent = `All ${this.units.length} districts, Census 2023. Click a column to sort, a row to open the district.`;
+      $("details-sub").textContent = `All ${this.units.length} areas. Click a column to sort, a row to open the area.`;
       const cols: [string, string, (u: District) => number | string][] = [
-        ["name", "District", (u) => u.name], ["province", "Province", (u) => u.province], ["population", "Population", (u) => u.population],
-        ["growth", "Growth %", (u) => u.growth ?? NaN], ["area", "Area km²", (u) => u.area], ["density", "Per km²", (u) => u.density ?? NaN],
-        ["urbanPct", "Urban %", (u) => u.urbanPct], ["sexRatio", "Sex ratio", (u) => u.sexRatio], ["pop2017", "2017", (u) => u.pop2017],
+        ["name", "District", (u) => u.name], ["province", "Province", (u) => u.province], ["population", "Population", (u) => u.population ?? NaN],
+        ["growth", "Growth %", (u) => u.growth ?? NaN], ["area", "Area km²", (u) => u.area ?? NaN], ["density", "Per km²", (u) => u.density ?? NaN],
+        ["urbanPct", "Urban %", (u) => u.urbanPct ?? NaN], ["sexRatio", "Sex ratio", (u) => u.sexRatio ?? NaN], ["pop2017", "2017", (u) => u.pop2017 ?? NaN],
       ];
       const col = cols.find((c) => c[0] === this.sort.key) ?? cols[2];
       const list = [...this.units].sort((x, y) => {
@@ -387,7 +414,7 @@ class PakistanApp {
         .join("")}</tr></thead><tbody>${list
         .map((u) => `<tr data-id="${u.id}" class="${u.id === this.primary.id ? "is-current" : ""}">${cols.map(([k, , f], i) => (i === 0 ? `<th scope="row">${cell(k, f(u))}</th>` : `<td class="${k === "province" ? "" : "num"}">${cell(k, f(u))}</td>`)).join("")}</tr>`)
         .join("")}</tbody></table></div>`;
-      this.csv = { name: "pakistan-districts-census-2023.csv", rows: [["District", "Province", "Division", "Type", "Population", "Male", "Female", "Transgender", "Urban", "Rural", "Area km2", "Per km2", "Urban %", "Males per 100 females", "Population 2017", "Growth % per year", "Tehsils"], ...list.map((u) => [u.name, u.province, u.division, u.kind, u.population, u.male, u.female, u.transgender, u.urban, u.rural, u.area, u.density ?? "", u.urbanPct, u.sexRatio, u.pop2017, u.growth ?? "", u.tehsils.join("; ")])] };
+      this.csv = { name: "pakistan-districts-census-2023.csv", rows: [["District", "Province", "Division", "Type", "Population", "Male", "Female", "Transgender", "Urban", "Rural", "Area km2", "Per km2", "Urban %", "Males per 100 females", "Population 2017", "Growth % per year", "Tehsils", "Source"], ...list.map((u) => [u.name, u.province, u.division, u.kind, u.population ?? "", u.male ?? "", u.female ?? "", u.transgender ?? "", u.urban ?? "", u.rural ?? "", u.area ?? "", u.density ?? "", u.urbanPct ?? "", u.sexRatio ?? "", u.pop2017 ?? "", u.growth ?? "", u.tehsils.join("; "), u.source ?? ""])] };
       $("details-note").textContent = "Source: PBS Census 2023, Table 1. Districts created after the census add up their census tehsils.";
     }
   }
@@ -516,7 +543,7 @@ class PakistanApp {
       pointers.set(e.pointerId, p);
       if (pinch && pointers.size === 2) {
         const now = pinchState();
-        this.map.panBy(pinch.mx - now.mx, pinch.my - now.my);
+        this.map.panBy(now.mx - pinch.mx, now.my - pinch.my);
         this.map.zoomAt(now.dist / pinch.dist, now.mx, now.my, true);
         pinch = now;
         return;
@@ -545,7 +572,7 @@ class PakistanApp {
         const now = performance.now();
         const dtm = Math.max(now - drag.t, 1);
         const dx = p.x - prev.x, dy = p.y - prev.y;
-        this.map.panBy(-dx, -dy);
+        this.map.panBy(dx, dy);
         drag.vx = drag.vx * 0.6 + (dx / dtm) * 0.4;
         drag.vy = drag.vy * 0.6 + (dy / dtm) * 0.4;
         drag.t = now;
@@ -617,6 +644,7 @@ class PakistanApp {
     const reg = row.arm === "Urban" ? "urban" : row.arm === "Rural" ? "rural" : "overall";
     let age = row.age;
     let m = row.left, f = row.right;
+    if (!u.age) return void (tip.hidden = true);
     if (u.age.detail === "broad") {
       const slot = this.data.ageLabels.indexOf(row.age);
       const band = slot < 1 ? 0 : slot < 3 ? 1 : slot < 13 ? 2 : 3;
@@ -626,7 +654,7 @@ class PakistanApp {
     }
     const pct = (v: number) => `${fmt(v, 2)}%`;
     const lines = [`<strong>${row.arm}</strong>`, `Aged ${age}`, `Male ${pct(m)}, female ${pct(f)}`];
-    if (this.compare && this.compare.age.detail === "5-year" && u.age.detail === "5-year") lines.push(`${esc(this.compare.name)}: male ${pct(row.cLeft)}, female ${pct(row.cRight)}`);
+    if (this.compare?.age?.detail === "5-year" && u.age.detail === "5-year") lines.push(`${esc(this.compare.name)}: male ${pct(row.cLeft)}, female ${pct(row.cRight)}`);
     if (u.age[reg].total === 0) lines.push("No population in this area");
     tip.innerHTML = lines.map((l) => `<span>${l}</span>`).join("");
     tip.hidden = false;
@@ -650,7 +678,8 @@ class PakistanApp {
         const li = document.createElement("li");
         const b = document.createElement("button");
         b.type = "button";
-        b.innerHTML = `<span>${esc(u.name)}${u.kind === "new" ? " <small>new district</small>" : ""}</span><small>${esc(u.division)}</small>`;
+        const tag = u.kind === "new" ? " <small>new district</small>" : u.kind === "ajk" || u.kind === "gb" || u.kind === "iok" ? " <small>no census table</small>" : "";
+        b.innerHTML = `<span>${esc(u.name)}${tag}</span><small>${esc(u.division || u.province)}</small>`;
         b.addEventListener("click", () => {
           $<HTMLDialogElement>("picker").close();
           if (this.pickerMode === "place") this.setPrimary(u, "fly");
@@ -707,7 +736,7 @@ class PakistanApp {
       li.append(Object.assign(document.createElement("strong"), { textContent: label }), document.createElement("br"), v);
       return li;
     }));
-    $("site-foot").textContent = `HumanScape by ${lab.name}. Code under the MIT License. Census data © Pakistan Bureau of Statistics.`;
+    $("site-foot").textContent = `HumanScape by ${lab.name}. Census data © Pakistan Bureau of Statistics.`;
     const created = this.units.filter((u) => u.kind === "new");
     $("new-districts").textContent =
       `Punjab notified new districts on 18 December 2024, after the census. HumanScape builds them from their census tehsils: ` +

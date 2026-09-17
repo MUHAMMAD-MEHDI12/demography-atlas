@@ -28,6 +28,12 @@ export interface MapLayer {
   inactive?: Feature<Geometry, null>[];
 }
 
+/** Extra lines drawn over the basemap: the supplied national outline and disputed areas. */
+export interface MapExtras {
+  outline?: Feature<Geometry, null>[];
+  disputed?: { feature: Feature<Geometry, null>; label: string; note?: string }[];
+}
+
 interface View {
   lon: number;
   lat: number;
@@ -84,6 +90,7 @@ export class WorldMap {
     world: WorldData,
     private onView: (x: number, y: number, offHome: boolean) => void,
     private layer?: MapLayer,
+    private extras?: MapExtras,
   ) {
     this.ctx = canvas.getContext("2d", { alpha: false })!;
     const fc = feature(world.topology, world.topology.objects.countries) as unknown as { features: Feature<Geometry, null>[] };
@@ -96,6 +103,24 @@ export class WorldMap {
       this.readColors();
       this.requestFrame();
     });
+  }
+
+  private hatch(color: string): CanvasPattern | string {
+    const size = 7;
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const x = c.getContext("2d")!;
+    x.strokeStyle = color;
+    x.lineWidth = 1.1;
+    x.beginPath();
+    x.moveTo(0, size);
+    x.lineTo(size, 0);
+    x.moveTo(-1, 1);
+    x.lineTo(1, -1);
+    x.moveTo(size - 1, size + 1);
+    x.lineTo(size + 1, size - 1);
+    x.stroke();
+    return this.ctx.createPattern(c, "repeat") ?? color;
   }
 
   readColors() {
@@ -263,7 +288,7 @@ export class WorldMap {
     this.view.scale = scale;
     if (!before) return;
     const after = this.project()(before);
-    if (after) this.panBy(after[0] - x, after[1] - y);
+    if (after) this.panBy(x - after[0], y - after[1]);
   }
 
   /** The place under a screen point: small-state dots first, then shapes. */
@@ -315,7 +340,7 @@ export class WorldMap {
     }
 
     if (this.velocity.x || this.velocity.y) {
-      this.panBy(-this.velocity.x * dt, -this.velocity.y * dt);
+      this.panBy(this.velocity.x * dt, this.velocity.y * dt);
       const decay = Math.exp(-dt / 325); // friction
       this.velocity.x *= decay;
       this.velocity.y *= decay;
@@ -418,6 +443,43 @@ export class WorldMap {
       ctx.lineWidth = 1.1;
       ctx.stroke();
       ctx.setLineDash([]);
+    }
+    // disputed areas supplied with the boundary files: hatched, with a label
+    for (const d of this.extras?.disputed ?? []) {
+      ctx.beginPath();
+      path(d.feature);
+      ctx.fillStyle = this.hatch(c.border);
+      ctx.fill();
+      ctx.strokeStyle = c.ink;
+      ctx.globalAlpha = 0.55;
+      ctx.setLineDash([5, 3]);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      const box = path.bounds(d.feature);
+      const w = box[1][0] - box[0][0];
+      if (w > 70) {
+        const cx = (box[0][0] + box[1][0]) / 2, cy = (box[0][1] + box[1][1]) / 2;
+        ctx.textAlign = "center";
+        ctx.fillStyle = c.ink;
+        ctx.font = `600 ${Math.min(15, Math.max(10, w / 14)).toFixed(0)}px "IBM Plex Sans Condensed", sans-serif`;
+        ctx.fillText(d.label, cx, cy);
+        if (d.note && w > 150) {
+          ctx.globalAlpha = 0.75;
+          ctx.font = `${Math.min(12, Math.max(9, w / 20)).toFixed(0)}px "IBM Plex Sans Condensed", sans-serif`;
+          ctx.fillText(d.note, cx, cy + 15);
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+    // national outline from the supplied boundary file
+    if (this.extras?.outline?.length) {
+      ctx.beginPath();
+      for (const f of this.extras.outline) path(f);
+      ctx.strokeStyle = c.ink;
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
     }
     for (const [code, place] of Object.entries(this.places)) {
       if (!place.dot) continue;

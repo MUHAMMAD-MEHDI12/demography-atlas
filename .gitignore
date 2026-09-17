@@ -4,3 +4,10 @@ pipeline/.cache
 __pycache__
 .DS_Store
 dist-single
+pipeline/boundaries/*.shp
+pipeline/boundaries/*.shx
+pipeline/boundaries/*.dbf
+pipeline/boundaries/*.prj
+pipeline/boundaries/*.cpg
+pipeline/boundaries/*.sbn
+pipeline/boundaries/*.sbx
