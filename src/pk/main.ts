@@ -560,7 +560,7 @@ class PakistanApp {
           this.motion.dragging = false;
           this.motion.follow(this.anchorTarget.x, this.anchorTarget.y);
           this.kick();
-          this.map.refresh();
+          this.map.recenter(!reducedMotion.matches); // fly the map to the dropped district
           drag = null;
           return;
         }
@@ -580,11 +580,11 @@ class PakistanApp {
         lastTap = isDouble ? { t: 0, x: 0, y: 0 } : { t: now, x: p.x, y: p.y };
         if (isDouble) {
           const u = at(p.x, p.y);
-          if (u) this.setPrimary(u, "stay");
+          if (u) this.setPrimary(u, "fly");
         } else if (!this.glyph.hit(e)) {
           this.tooltip(null, 0, 0);
           const u = at(p.x, p.y); // a single click opens the district
-          if (u && u.id !== this.primary.id) this.setPrimary(u, "stay");
+          if (u && u.id !== this.primary.id) this.setPrimary(u, "fly");
         }
       }
       drag = null;

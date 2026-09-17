@@ -59,7 +59,7 @@ class App {
 
   constructor(private data: Dataset, world: WorldData) {
     const hash = new URLSearchParams(location.hash.slice(1));
-    this.primary = data.byCode(Number(hash.get("place"))) ?? data.byCode(156)!;
+    this.primary = data.byCode(Number(hash.get("place"))) ?? data.byCode(586)!; // Pakistan by default
     this.compare = data.byCode(Number(hash.get("vs"))) ?? null;
     const y = Number(hash.get("year"));
     this.year = y >= data.yearStart && y <= data.yearEnd ? Math.round(y) : data.lastEstimate;
@@ -453,7 +453,7 @@ class App {
       const place = code === null ? undefined : this.data.byCode(code);
       if (place) {
         this.tooltip(null, 0, 0);
-        this.setPrimary(place, true); // keep the map still; the chart moves to the place
+        this.setPrimary(place); // fly smoothly to the country
       }
     };
 
@@ -549,7 +549,7 @@ class App {
           this.motion.dragging = false;
           this.motion.follow(this.anchorTarget.x, this.anchorTarget.y);
           this.kick();
-          this.map.refresh();
+          this.map.recenter(!reducedMotion.matches); // fly the map to the dropped country
           drag = null;
           return;
         }
