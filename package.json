@@ -11,7 +11,8 @@
     "geo": "node scripts/build-geo.mjs",
     "data": "python pipeline/build_data.py",
     "build:single": "npm run build && node scripts/make-standalone.mjs",
-    "data:pakistan": "python pipeline/build_pakistan.py"
+    "data:pakistan": "python pipeline/build_pakistan.py",
+    "data:search": "node scripts/build-search.mjs"
   },
   "license": "MIT",
   "dependencies": {

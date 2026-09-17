@@ -5,6 +5,7 @@ import { WorldMap, type WorldData } from "../map";
 import { ChartMotion } from "../motion";
 import { fmt, compact } from "../format";
 import { SITE } from "../site";
+import { SearchBox, searchMarkup } from "../search";
 import { loadPakistan, shapes, breaks, classOf, ramp, value, INDICATORS, type District, type Indicator, type PakistanData } from "./data";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -123,6 +124,14 @@ class PakistanApp {
     this.bindStage();
     this.bindControls();
     this.buildPicker();
+    $("search").innerHTML = searchMarkup;
+    new SearchBox($("search"), (item) => {
+      if (item.c !== undefined) location.href = `./index.html#place=${item.c}`; // country: open the world atlas
+      else {
+        const u = this.units.find((x) => slug(x.name) === item.d);
+        if (u) this.setPrimary(u, "fly");
+      }
+    });
     this.renderSiteInfo();
     new ResizeObserver(() => this.resize()).observe($("stage"));
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
@@ -439,7 +448,7 @@ class PakistanApp {
     };
 
     stage.addEventListener("pointerdown", (e) => {
-      if ((e.target as Element).closest("button, a, .legend, .tooltip")) return;
+      if ((e.target as Element).closest("button, a, input, .search, .legend, .tooltip")) return;
       try {
         stage.setPointerCapture(e.pointerId);
       } catch {
@@ -545,7 +554,11 @@ class PakistanApp {
         if (isDouble) {
           const u = at(p.x, p.y);
           if (u) this.setPrimary(u, "stay");
-        } else if (!this.glyph.hit(e)) { this.tooltip(null, 0, 0); const u = at(p.x, p.y); if (u && u.id !== this.primary.id) this.setPrimary(u, "stay"); }
+        } else if (!this.glyph.hit(e)) {
+          this.tooltip(null, 0, 0);
+          const u = at(p.x, p.y); // a single click opens the district
+          if (u && u.id !== this.primary.id) this.setPrimary(u, "stay");
+        }
       }
       drag = null;
     };

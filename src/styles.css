@@ -194,6 +194,149 @@ button {
   color: var(--ink-2);
   text-shadow: 0 0 4px var(--ocean);
 }
+/* ---------- search ------------------------------------------------------------ */
+.search {
+  position: relative;
+  flex: 0 1 320px;
+  min-width: 190px;
+  margin-top: 4px;
+  z-index: 6;
+}
+.search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 19px;
+  background: var(--panel);
+  box-shadow: 0 4px 14px -10px rgb(10 30 40 / 0.5);
+}
+.search.is-open .search-field,
+.search-field:focus-within {
+  border-color: var(--ink-2);
+}
+.search-icon {
+  position: absolute;
+  left: 12px;
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.search-field input,
+.search-ghost {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  padding: 0 14px 0 36px;
+  border: 0;
+  font: inherit;
+  font-size: 15px;
+  line-height: 36px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.search-field input {
+  background: transparent;
+  color: var(--ink);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.search-field input::placeholder {
+  color: var(--ink-2);
+}
+.search-field input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+.search-ghost {
+  color: color-mix(in srgb, var(--ink-2) 70%, transparent);
+  pointer-events: none;
+}
+.search-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  display: none;
+  min-width: 280px;
+  max-height: min(380px, 60svh);
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 14px 34px -14px rgb(10 30 40 / 0.55);
+}
+.search.is-open .search-list {
+  display: block;
+}
+.search-list li {
+  display: grid;
+  gap: 1px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.search-list li.is-active,
+.search-list li:hover {
+  background: var(--land);
+}
+.search-list li.search-empty {
+  cursor: default;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.search-name {
+  font-size: 15px;
+  font-weight: 500;
+}
+.search-name mark {
+  background: none;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--highlight);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.search-alias {
+  color: var(--ink-2);
+  font-weight: 400;
+  font-size: 13px;
+}
+.search-meta {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.search-kind {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--male) 18%, transparent);
+  color: var(--ink);
+}
+.search-kind-district,
+.search-kind-tehsil {
+  background: color-mix(in srgb, var(--gain) 22%, transparent);
+}
+@media (max-width: 760px) {
+  .head {
+    flex-wrap: wrap;
+  }
+  .search {
+    order: 3;
+    flex: 1 1 100%;
+    margin-top: 2px;
+  }
+}
+
 .head .place {
   flex: 1 1 auto;
   min-width: 0;

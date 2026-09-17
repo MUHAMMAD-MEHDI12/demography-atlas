@@ -8,6 +8,7 @@ import { PopulationChart, ChangeChart, type ChangeMode } from "./charts";
 import { SITE } from "./site";
 import { Details } from "./details";
 import { YearPicker } from "./yearpicker";
+import { SearchBox, searchMarkup } from "./search";
 
 declare global {
   interface Window {
@@ -96,6 +97,14 @@ class App {
     this.bindStage();
     this.bindControls();
     this.buildPicker();
+    $("search").innerHTML = searchMarkup;
+    new SearchBox($("search"), (item) => {
+      if (item.d) location.href = `./pakistan.html#d=${item.d}`; // district or tehsil: open the Pakistan section
+      else {
+        const place = item.c === undefined ? undefined : this.data.byCode(item.c);
+        if (place) this.setPrimary(place);
+      }
+    });
     new ResizeObserver(() => this.resize()).observe($("stage"));
     this.resize();
 
@@ -419,7 +428,7 @@ class App {
     };
 
     stage.addEventListener("pointerdown", (e) => {
-      if ((e.target as Element).closest("button, a, .legend, .tooltip, .year-picker")) return;
+      if ((e.target as Element).closest("button, a, input, .search, .legend, .tooltip, .year-picker")) return;
       try {
         stage.setPointerCapture(e.pointerId);
       } catch {
@@ -533,7 +542,10 @@ class App {
             clearTimeout(hideTimer);
             hideTimer = window.setTimeout(() => this.tooltip(null, 0, 0), 3000);
           }
-        } else { this.tooltip(null, 0, 0); openAt(p.x, p.y); }
+        } else {
+          this.tooltip(null, 0, 0);
+          openAt(p.x, p.y); // a single click opens the country
+        }
       }
       drag = null;
     };
