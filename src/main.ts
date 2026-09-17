@@ -10,6 +10,7 @@ import { Details } from "./details";
 import { YearPicker } from "./yearpicker";
 import { SearchBox, searchMarkup } from "./search";
 import { Tour, tourMarkup } from "./tour";
+import { initTheme } from "./theme";
 
 declare global {
   interface Window {
@@ -20,6 +21,7 @@ declare global {
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const PLAY_SPEED = 4; // years per second
+const CURRENT_YEAR = new Date().getFullYear();
 
 async function loadWorld(): Promise<WorldData> {
   if (window.__WORLD__) return window.__WORLD__;
@@ -54,6 +56,7 @@ class App {
   private motion = new ChartMotion(() => reducedMotion.matches);
   private yearPicker!: YearPicker;
   private tour!: Tour;
+  private flightMs: number | undefined; // shorter flights during the tour
   private chartDrag: { dx: number; dy: number; id: number } | null = null;
   private chartMoved = false;
 
@@ -62,7 +65,7 @@ class App {
     this.primary = data.byCode(Number(hash.get("place"))) ?? data.byCode(586)!; // Pakistan by default
     this.compare = data.byCode(Number(hash.get("vs"))) ?? null;
     const y = Number(hash.get("year"));
-    this.year = y >= data.yearStart && y <= data.yearEnd ? Math.round(y) : data.lastEstimate;
+    this.year = y >= data.yearStart && y <= data.yearEnd ? Math.round(y) : Math.min(Math.max(CURRENT_YEAR, data.yearStart), data.yearEnd); // current year by default
     this.yearShown = this.year;
 
     this.glyph = new Glyph($<HTMLElement>("glyph") as unknown as SVGSVGElement, worldArms(data.ages, data.fertAges), (row, x, y) => this.tooltip(row, x, y));
@@ -99,6 +102,7 @@ class App {
     this.bindStage();
     this.bindControls();
     this.buildPicker();
+    initTheme(() => this.map.repaint());
     $("search").innerHTML = searchMarkup;
     new SearchBox($("search"), (item) => {
       this.tour.stop();
@@ -115,7 +119,8 @@ class App {
       $<HTMLButtonElement>("tour-btn"),
       $("tour-caption"),
       () => {
-        const y = Math.round(this.year);
+        const y = Math.min(CURRENT_YEAR, this.data.yearEnd); // current year
+        this.setYear(y);
         return this.data.places
           .filter((p) => p.area !== "Aggregate")
           .map((p) => ({ p, pop: this.data.annualFigures(p.index, y)?.population ?? NaN }))
@@ -124,11 +129,13 @@ class App {
           .slice(0, 10)
           .map(({ p, pop }) => ({
             title: p.name,
-            detail: `${compact(pop, true)} people in ${y}`,
+            detail: `${compact(pop, true)} people in ${y}${y > this.data.lastEstimate ? ", UN projection" : ""}`,
             go: () => {
               this.setPlaying(false);
               this.compare = null;
+              this.flightMs = 1100;
               this.setPrimary(p);
+              this.flightMs = undefined;
               return this.map.lastFlightMs;
             },
           }));
@@ -178,7 +185,7 @@ class App {
     $("legend-cmp").hidden = !this.compare;
     $("legend-cmp-name").textContent = this.compare?.name ?? "";
     document.title = "HumanScape";
-    this.map.select(p.code, this.compare?.code ?? null, (code) => this.members(code), animate && !reducedMotion.matches, stay);
+    this.map.select(p.code, this.compare?.code ?? null, (code) => this.members(code), animate && !reducedMotion.matches, stay, this.flightMs);
     this.statsKey = "";
     this.kick();
   }

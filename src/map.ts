@@ -155,7 +155,7 @@ export class WorldMap {
    * moves to the place (used for double-click); the map still flies if the place
    * is off screen.
    */
-  select(primary: number, compare: number | null, members: (code: number) => number[], animate: boolean, stay = false) {
+  select(primary: number, compare: number | null, members: (code: number) => number[], animate: boolean, stay = false, durationMs?: number) {
     const moved = primary !== this.selectedCode;
     this.lastFlightMs = 0;
     this.selectedCode = primary;
@@ -166,7 +166,7 @@ export class WorldMap {
     if (stay && this.w && this.onScreen(this.anchor)) {
       this.stop();
       this.requestFrame();
-    } else if (moved || !this.w) this.flyTo(this.home, animate);
+    } else if (moved || !this.w) this.flyTo(this.home, animate, durationMs);
     else this.requestFrame();
   }
 
@@ -193,7 +193,7 @@ export class WorldMap {
     this.flyTo(this.home, animate);
   }
 
-  flyTo(target: View, animate: boolean) {
+  flyTo(target: View, animate: boolean, durationMs?: number) {
     this.stop();
     if (!animate || !this.w) {
       this.lastFlightMs = 0;
@@ -204,8 +204,8 @@ export class WorldMap {
     let dLon = target.lon - this.view.lon;
     if (dLon > 180) dLon -= 360;
     if (dLon < -180) dLon += 360;
-    const dist = Math.hypot(dLon, target.lat - this.view.lat);
-    const ms = 1300 + Math.min(dist, 180) * 6;
+    // every flight takes 1.5 seconds
+    const ms = durationMs ?? 1500;
     this.lastFlightMs = ms;
     this.flight = { from: { ...this.view }, to: target, dLon, t0: performance.now(), ms };
     this.requestFrame();

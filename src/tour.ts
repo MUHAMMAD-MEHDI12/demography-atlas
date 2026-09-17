@@ -8,7 +8,7 @@ export interface TourStop {
   go: () => number;
 }
 
-const HOLD_MS = 4200;
+const STEP_MS = 1500; // time on each place, flight included
 
 export class Tour {
   running = false;
@@ -59,7 +59,7 @@ export class Tour {
     this.caption.querySelector(".tc-title")!.textContent = stop.title;
     this.caption.querySelector(".tc-detail")!.textContent = stop.detail;
     const flight = stop.go();
-    const total = flight + HOLD_MS;
+    const total = Math.max(STEP_MS, flight);
     this.bar(0, 0);
     requestAnimationFrame(() => requestAnimationFrame(() => this.bar(100, total)));
     this.timer = window.setTimeout(() => this.next(), total);

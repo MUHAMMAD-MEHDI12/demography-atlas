@@ -7,6 +7,7 @@ import { fmt, compact } from "../format";
 import { SITE } from "../site";
 import { SearchBox, searchMarkup } from "../search";
 import { Tour, tourMarkup } from "../tour";
+import { initTheme } from "../theme";
 import { loadPakistan, shapes, breaks, classOf, ramp, value, INDICATORS, type District, type Indicator, type PakistanData } from "./data";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -76,6 +77,7 @@ class PakistanApp {
   private csv: { name: string; rows: (string | number)[][] } = { name: "", rows: [] };
   private rankByPop = new Map<number, number>();
   private tour!: Tour;
+  private flightMs: number | undefined; // shorter flights during the tour
 
   constructor(private data: PakistanData, world: WorldData) {
     this.units = data.units;
@@ -150,7 +152,9 @@ class PakistanApp {
             detail: `${compact(u.population, true)} people, ${u.province}`,
             go: () => {
               this.compare = null;
+              this.flightMs = 1100;
               this.setPrimary(u, "fly");
+              this.flightMs = undefined;
               return this.map.lastFlightMs;
             },
           })),
@@ -158,7 +162,7 @@ class PakistanApp {
     );
     this.renderSiteInfo();
     new ResizeObserver(() => this.resize()).observe($("stage"));
-    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    initTheme(() => {
       this.recolour();
       this.map.repaint();
       this.renderLegend();
@@ -195,7 +199,7 @@ class PakistanApp {
     $("census-sub").textContent = p.age.detail === "broad" ? "Broad age groups from tehsil tables" : "Pakistan Bureau of Statistics";
     valuesOf(p, this.target);
     if (c) valuesOf(c, this.cmpTarget);
-    this.map.select(p.id, c?.id ?? null, (id) => [id], animate && !reducedMotion.matches, stay);
+    this.map.select(p.id, c?.id ?? null, (id) => [id], animate && !reducedMotion.matches, stay, this.flightMs);
     this.renderStats();
     this.renderRanking();
     if ($<HTMLDialogElement>("details").open) this.renderDetails();

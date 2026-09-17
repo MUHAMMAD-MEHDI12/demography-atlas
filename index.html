@@ -1,7 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
+    <script>try{if(localStorage.getItem("humanscape-theme")==="dark")document.documentElement.dataset.theme="dark"}catch(e){}</script>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content="How every country's age structure, deaths and births change from 1950 to 2100, using UN World Population Prospects 2024." />
     <title>HumanScape</title>
@@ -22,6 +23,7 @@
           </button>
           <div class="search" id="search"></div>
           <div class="head-actions">
+          <button type="button" class="theme-btn" id="theme-btn" aria-label="Switch to dark mode"></button>
           <a class="section-link" href="./pakistan.html">Pakistan districts</a>
           <div class="compare" id="compare">
             <button type="button" class="compare-btn" id="compare-btn" aria-haspopup="dialog">Compare</button>
