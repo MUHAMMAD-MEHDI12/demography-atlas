@@ -1,3 +1,5 @@
 pandas>=2.1
 numpy>=1.26
 pyreadr>=0.5
+geopandas>=0.14
+topojson>=1.8

@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="Population of every district of Pakistan by age, sex and rural or urban area, from the 2023 census of the Pakistan Bureau of Statistics." />
+    <title>HumanScape</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@1,400;1,500&display=swap" rel="stylesheet" />
+  </head>
+  <body class="pk">
+    <div class="app">
+      <main class="stage" id="stage">
+        <canvas id="map" aria-hidden="true"></canvas>
+        <svg id="glyph" role="img" aria-labelledby="glyph-desc"><desc id="glyph-desc">Population by age and sex for the selected district: all residents, urban and rural.</desc></svg>
+        <header class="head">
+          <button class="place" id="place-btn" type="button" aria-haspopup="dialog">
+            <span class="place-name" id="place-name">Loading</span>
+            <span class="place-region" id="place-region">Pakistan Census 2023</span>
+          </button>
+          <div class="head-actions">
+            <a class="section-link" href="./index.html">World atlas</a>
+            <div class="compare" id="compare">
+              <button type="button" class="compare-btn" id="compare-btn" aria-haspopup="dialog">Compare</button>
+              <button type="button" class="compare-clear" id="compare-clear" aria-label="Stop comparing" hidden>×</button>
+            </div>
+          </div>
+        </header>
+        <div class="tooltip" id="tooltip" role="status" hidden></div>
+        <div class="census-badge" id="census-badge">
+          <span class="cb-title">Census 2023</span>
+          <span class="cb-sub" id="census-sub">Pakistan Bureau of Statistics</span>
+        </div>
+        <button type="button" class="recenter" id="recenter" hidden>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" /><circle cx="12" cy="12" r="7.5" fill="none" /></svg>
+          Center on <span id="recenter-name"></span>
+        </button>
+        <ul class="legend" aria-label="Legend">
+          <li><i class="sw sw-m"></i>Male</li>
+          <li><i class="sw sw-f"></i>Female</li>
+          <li class="legend-cmp" id="legend-cmp" hidden><i class="sw sw-c"></i><span id="legend-cmp-name"></span></li>
+          <li class="hint"><span class="hint-long">Grab the triangle and drop it on any district, or double-click a district. Drag the map to move it.</span><span class="hint-short">Drag the triangle onto a district</span></li>
+        </ul>
+        <p class="status" id="status">Loading census data</p>
+      </main>
+
+      <section class="dock" aria-label="District figures">
+        <p class="kind-note" id="kind-note" hidden></p>
+        <dl class="stats" id="stats">
+          <div><dt>Population</dt><dd data-k="population"></dd></div>
+          <div><dt>Growth per year, 2017–2023</dt><dd data-k="growth"></dd></div>
+          <div><dt>Area</dt><dd data-k="area"></dd></div>
+          <div><dt>People per km²</dt><dd data-k="density"></dd></div>
+          <div><dt>Urban population</dt><dd data-k="urbanPct"></dd></div>
+          <div><dt>Males per 100 females</dt><dd data-k="sexRatio"></dd></div>
+          <div><dt>Population in 2017</dt><dd data-k="pop2017"></dd></div>
+          <div><dt>Rank in Pakistan by population</dt><dd data-k="rank"></dd></div>
+        </dl>
+        <button type="button" class="details-btn" id="details-btn" aria-haspopup="dialog">
+          <span>Detailed statistics</span>
+          <small>Age tables for this district and a sortable table of all 140 districts</small>
+        </button>
+
+        <section class="panel-block" aria-labelledby="colour-title">
+          <div class="block-head">
+            <h2 id="colour-title">Map colours</h2>
+            <select id="indicator" class="pk-select" aria-label="Colour the map by">
+              <option value="population">Population</option>
+              <option value="density">People per km²</option>
+              <option value="growth">Growth per year</option>
+              <option value="urbanPct">Urban population</option>
+              <option value="sexRatio">Males per 100 females</option>
+            </select>
+          </div>
+          <ol class="choro-legend" id="choro-legend"></ol>
+        </section>
+
+        <section class="panel-block" aria-labelledby="rank-title">
+          <h2 id="rank-title">Districts of the province</h2>
+          <p class="muted rank-sub" id="rank-sub"></p>
+          <ol class="rank-list" id="rank-list"></ol>
+        </section>
+
+        <section class="panel-block" aria-labelledby="tehsil-title">
+          <h2 id="tehsil-title">Tehsils</h2>
+          <p class="tehsils" id="tehsils"></p>
+        </section>
+
+        <nav class="panel-links" aria-label="More information">
+          <button type="button" class="link-btn" id="details-link">Detailed statistics</button>
+          <a href="#sources">Data sources</a>
+          <a href="#contact">Contact</a>
+        </nav>
+      </section>
+    </div>
+
+    <footer class="site" id="site">
+      <div class="site-inner">
+        <section id="about" class="site-block">
+          <h2>About the Pakistan section</h2>
+          <p>
+            This section shows every district of Pakistan from the 2023 census. The triangle around a district holds three age
+            charts: all residents, people living in urban areas, and people living in rural areas, each split by sex.
+          </p>
+          <p>
+            Grab the triangle and drop it on a district, double-click a district, or choose one from the list. Colour the map by
+            population, density, growth, urban share or sex ratio, and use Compare to overlay a second district.
+          </p>
+        </section>
+
+        <section id="lab" class="site-block" hidden>
+          <h2 id="lab-name">About the lab</h2>
+          <p id="lab-intro" hidden></p>
+          <p id="lab-website" hidden></p>
+        </section>
+
+        <section id="sources" class="site-block site-wide">
+          <h2>Data sources and how to verify them</h2>
+          <p>
+            All figures come from the <strong>7th Population and Housing Census 2023</strong> of the
+            <strong>Pakistan Bureau of Statistics (PBS)</strong>. The census covers the four provinces and Islamabad; Azad Jammu and
+            Kashmir and Gilgit-Baltistan are not in these tables and are shown in grey.
+          </p>
+          <div class="table-wrap">
+            <table class="sources-table">
+              <thead><tr><th scope="col">What you see</th><th scope="col">PBS census table</th><th scope="col">How it is used</th></tr></thead>
+              <tbody>
+                <tr><td>Population, sex, area, urban and rural population, 2017 population, growth</td><td>Table 1 (district and tehsil)</td><td>As published; districts made of several tehsils are added up</td></tr>
+                <tr><td>Age charts for census districts</td><td>Table 4, single years of age by sex, rural and urban</td><td>Grouped into 5-year ages and shown as shares</td></tr>
+                <tr><td>Age charts for districts created after the census</td><td>Table 5, broad age groups by tehsil</td><td>Ages 0–4, 5–14, 15–64 and 65+, each spread evenly over its 5-year rows</td></tr>
+                <tr><td>District boundaries</td><td>UN OCHA administrative boundaries</td><td>For the map only</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            PBS notes that Table 1 includes headcounts from restricted areas where no age details were collected, while Table 4 and
+            later tables cover only people with full details. That is why totals come from Table 1 and age charts show shares.
+          </p>
+          <h3>Districts created after the census</h3>
+          <p id="new-districts"></p>
+          <h3>Checks run when the data is built</h3>
+          <ul>
+            <li>Province totals match PBS exactly: Punjab 127,688,922; Sindh 55,696,147; Khyber Pakhtunkhwa 40,856,097; Balochistan 14,894,402; Islamabad 2,363,863; Pakistan 241,499,431.</li>
+            <li>Growth rates recomputed from the 2017 and 2023 populations match all 590 tehsil rates published by PBS to within 0.01 points; the same method gives rates for districts made of several tehsils.</li>
+            <li>For every tehsil, rural plus urban population equals the total.</li>
+          </ul>
+          <h3>Corrections to the machine-readable tables</h3>
+          <ul id="fixes"></ul>
+          <h3>Verify it yourself</h3>
+          <ul class="link-list">
+            <li><a href="https://www.pbs.gov.pk/" target="_blank" rel="noopener">Pakistan Bureau of Statistics</a>: census 2023 results and district tables</li>
+            <li><a href="https://www.pbs.gov.pk/wp-content/uploads/census_tables/tables/table_1_punjab_districts.pdf" target="_blank" rel="noopener">PBS Table 1, Punjab districts (PDF)</a> and <a href="https://www.pbs.gov.pk/wp-content/uploads/census_tables/tables/table_1_sindh_districts.pdf" target="_blank" rel="noopener">Sindh districts (PDF)</a></li>
+            <li><a href="https://cran.r-project.org/package=PakPC2023" target="_blank" rel="noopener">PakPC2023</a>: the census tables in machine-readable form</li>
+            <li><a href="https://data.humdata.org/dataset/cod-ab-pak" target="_blank" rel="noopener">OCHA administrative boundaries for Pakistan</a></li>
+          </ul>
+        </section>
+
+        <section id="contact" class="site-block">
+          <h2>Contact</h2>
+          <p>Questions, corrections or ideas for this atlas are welcome.</p>
+          <ul class="contact-list" id="contact-list"></ul>
+        </section>
+      </div>
+      <p class="site-foot" id="site-foot"></p>
+    </footer>
+
+    <dialog class="details" id="details" aria-labelledby="details-title">
+      <div class="details-head">
+        <div>
+          <h2 id="details-title">Detailed statistics</h2>
+          <p class="muted" id="details-sub"></p>
+        </div>
+        <button type="button" class="picker-close" id="details-close" aria-label="Close">×</button>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Statistics">
+        <button type="button" role="tab" data-tab="district" aria-selected="true">This district</button>
+        <button type="button" role="tab" data-tab="all" aria-selected="false">All districts</button>
+      </div>
+      <div class="details-body" id="details-body" role="tabpanel"></div>
+      <div class="details-foot">
+        <p class="muted" id="details-note"></p>
+        <div class="details-actions">
+          <a href="https://www.pbs.gov.pk/" target="_blank" rel="noopener">Verify on the PBS website</a>
+          <button type="button" class="csv-btn" id="details-csv">Download CSV</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="picker" id="picker" aria-labelledby="picker-title">
+      <form method="dialog" class="picker-head">
+        <h2 id="picker-title">Choose a district</h2>
+        <button class="picker-close" aria-label="Close">×</button>
+      </form>
+      <input type="search" id="picker-input" placeholder="Search 140 districts" autocomplete="off" />
+      <ul class="picker-list" id="picker-list"></ul>
+    </dialog>
+
+    <script type="module" src="/src/pk/main.ts"></script>
+  </body>
+</html>

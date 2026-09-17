@@ -1,5 +1,5 @@
 {
-  "name": "demography-atlas",
+  "name": "humanscape",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "geo": "node scripts/build-geo.mjs",
     "data": "python pipeline/build_data.py",
-    "build:single": "npm run build && node scripts/make-standalone.mjs"
+    "build:single": "npm run build && node scripts/make-standalone.mjs",
+    "data:pakistan": "python pipeline/build_pakistan.py"
   },
   "license": "MIT",
   "dependencies": {
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@types/d3-geo": "^3.1.1",
+    "@types/node": "^22.20.3",
     "@types/topojson-client": "^3.1.5",
     "@types/topojson-specification": "^1.0.5",
     "typescript": "^5.9.3",

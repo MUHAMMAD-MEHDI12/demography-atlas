@@ -1,4 +1,4 @@
-# Demography Atlas
+# HumanScape
 
 An interactive map of how every country's population is built, how its people die and when mothers give birth, year by year from 1950 to 2100.
 
@@ -29,6 +29,16 @@ Years up to 2023 are UN estimates. Later years are the UN median projection and 
 - About, lab, data sources and contact sections
 - Shareable links: the address updates with place, year and comparison, e.g. `#place=392&year=2060&vs=566`
 - Works on phones, supports light and dark mode
+
+## Pakistan districts section
+
+`pakistan.html` shows all 140 districts of Pakistan from the 2023 census of the Pakistan Bureau of Statistics (PBS):
+three age pyramids per district (all residents, urban, rural), a map coloured by population, density, growth, urban share or
+sex ratio, district rankings, detailed tables and CSV downloads. Districts created after the census (Kot Addu, Taunsa, Murree,
+Talagang, Wazirabad; Punjab notification of 18 December 2024) are built from their census tehsils.
+
+The data file `public/data/pakistan.json` is built by `pipeline/build_pakistan.py`, which checks the province totals against
+the published PBS figures and stops if they differ.
 
 ## Data
 
@@ -66,6 +76,9 @@ src/charts.ts              population trend and 5-year change charts
 src/details.ts             detailed statistics dialog and CSV export
 src/yearpicker.ts          year picker under the chart
 src/site.ts                lab and contact details (edit this)
+src/motion.ts              spring motion for dragging the chart
+src/pk/                    Pakistan districts page
+pipeline/build_pakistan.py PBS Census 2023 + OCHA boundaries -> public/data/pakistan.json
 src/map.ts                 draws the map; drag, inertia, zoom and fly-to (Canvas, d3-geo)
 src/main.ts                app state, controls, search, comparison, links
 src/styles.css             layout and theme

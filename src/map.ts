@@ -16,6 +16,18 @@ export interface WorldData {
   places: Record<string, { c: [number, number]; b: [number, number, number, number]; dot: 0 | 1 }>;
 }
 
+/** A custom set of selectable areas drawn over the world (used by the Pakistan districts page). */
+export interface MapLayer {
+  features: Feature<Geometry, null>[];
+  places: WorldData["places"];
+  /** fill colour for an area, e.g. a choropleth; null uses the land colour */
+  fill?: (id: number) => string | null;
+  /** smallest span in degrees when framing an area */
+  minSpan?: number;
+  /** areas drawn for context in grey (not selectable) */
+  inactive?: Feature<Geometry, null>[];
+}
+
 interface View {
   lon: number;
   lat: number;
@@ -40,6 +52,8 @@ const clampLat = (l: number) => Math.max(-72, Math.min(80, l));
 export class WorldMap {
   private ctx: CanvasRenderingContext2D;
   private features: Feature<Geometry, null>[];
+  private context: Feature<Geometry, null>[] = [];
+  private places: WorldData["places"];
   private projection: GeoProjection = geoNaturalEarth1();
   private graticule = geoGraticule10();
   private colors: Record<string, string> = {};
@@ -65,12 +79,16 @@ export class WorldMap {
 
   constructor(
     private canvas: HTMLCanvasElement,
-    private world: WorldData,
+    world: WorldData,
     private onView: (x: number, y: number, offHome: boolean) => void,
+    private layer?: MapLayer,
   ) {
     this.ctx = canvas.getContext("2d", { alpha: false })!;
     const fc = feature(world.topology, world.topology.objects.countries) as unknown as { features: Feature<Geometry, null>[] };
-    this.features = fc.features.filter((f) => f.id !== undefined);
+    const countries = fc.features.filter((f) => f.id !== undefined);
+    this.features = layer ? layer.features : countries;
+    this.context = layer ? fc.features : [];
+    this.places = layer ? layer.places : world.places;
     this.readColors();
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
       this.readColors();
@@ -104,29 +122,29 @@ export class WorldMap {
     return this.worldScale() * 0.75;
   }
   private maxScale() {
-    return this.worldScale() * 60;
+    return this.worldScale() * (this.layer ? 400 : 60);
   }
 
   private viewFor(code: number): View {
-    const region = REGION_VIEWS[code];
+    const region = this.layer ? undefined : REGION_VIEWS[code];
     let lon: number, lat: number, span: number;
     if (region) ({ lon, lat, span } = region);
     else {
-      const p = this.world.places[code];
-      if (!p) return this.viewFor(900);
+      const p = this.places[code];
+      if (!p) return { lon: 12, lat: 8, scale: this.worldScale() };
       const [w, s, e, n] = p.b;
       const dLon = (e - w + 360) % 360 || 1;
       [lon, lat] = p.c;
-      span = Math.min(Math.max(Math.max(dLon * Math.cos(((s + n) / 2) / DEG), n - s), 7), 140);
+      span = Math.min(Math.max(Math.max(dLon * Math.cos(((s + n) / 2) / DEG), n - s), this.layer?.minSpan ?? 7), 140);
     }
     const scale = span ? Math.max((this.lens * 2.1 * DEG) / span, this.worldScale() * 0.9) : this.worldScale();
     return { lon, lat, scale };
   }
 
   private anchorFor(code: number): [number, number] {
-    const region = REGION_VIEWS[code];
+    const region = this.layer ? undefined : REGION_VIEWS[code];
     if (region) return [region.lon, region.lat];
-    return this.world.places[code]?.c ?? [12, 8];
+    return this.places[code]?.c ?? [12, 8];
   }
 
   // ---------- public navigation ------------------------------------------------
@@ -153,6 +171,12 @@ export class WorldMap {
     const xy = this.project()(lonlat);
     const m = 30;
     return !!xy && xy[0] > m && xy[0] < this.w - m && xy[1] > m && xy[1] < this.h - m;
+  }
+
+  /** Colours changed (e.g. a new choropleth): redraw. */
+  repaint() {
+    this.readColors();
+    this.requestFrame();
   }
 
   /** Redraw and report the chart position again. */
@@ -242,7 +266,7 @@ export class WorldMap {
     const p = this.project();
     let best: number | null = null;
     let bestD = 14;
-    for (const [code, place] of Object.entries(this.world.places)) {
+    for (const [code, place] of Object.entries(this.places)) {
       if (!place.dot) continue;
       const xy = p(place.c);
       if (!xy) continue;
@@ -333,12 +357,39 @@ export class WorldMap {
     ctx.lineWidth = 0.5;
     ctx.stroke();
 
-    ctx.beginPath();
-    for (const f of this.features) path(f);
-    ctx.fillStyle = c.land;
-    ctx.fill();
+    if (this.context.length) {
+      ctx.beginPath();
+      for (const f of this.context) path(f);
+      ctx.fillStyle = c.land;
+      ctx.fill();
+      ctx.strokeStyle = c.border;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    if (this.layer?.inactive?.length) {
+      ctx.beginPath();
+      for (const f of this.layer.inactive) path(f);
+      ctx.fillStyle = c.rule;
+      ctx.fill();
+    }
+    const fill = this.layer?.fill;
+    if (fill) {
+      for (const f of this.features) {
+        ctx.beginPath();
+        path(f);
+        ctx.fillStyle = fill(Number(f.id)) ?? c.land;
+        ctx.fill();
+      }
+      ctx.beginPath();
+      for (const f of this.features) path(f);
+    } else {
+      ctx.beginPath();
+      for (const f of this.features) path(f);
+      ctx.fillStyle = c.land;
+      ctx.fill();
+    }
     ctx.strokeStyle = c.border;
-    ctx.lineWidth = 0.6;
+    ctx.lineWidth = fill ? 0.5 : 0.6;
     ctx.stroke();
 
     const sel = this.features.filter((f) => this.selected.has(Number(f.id)));
@@ -363,7 +414,7 @@ export class WorldMap {
       ctx.stroke();
       ctx.setLineDash([]);
     }
-    for (const [code, place] of Object.entries(this.world.places)) {
+    for (const [code, place] of Object.entries(this.places)) {
       if (!place.dot) continue;
       const xy = p(place.c);
       if (!xy || xy[0] < -10 || xy[0] > this.w + 10 || xy[1] < -10 || xy[1] > this.h + 10) continue;

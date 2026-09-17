@@ -1,6 +1,7 @@
 import "./styles.css";
 import { Dataset, emptyProfile, oldAgeDependency, type Place, type Profile } from "./data";
-import { Glyph, type ReadoutRow } from "./glyph";
+import { Glyph, worldArms, profileArms, type ReadoutRow } from "./glyph";
+import { ChartMotion } from "./motion";
 import { WorldMap, type WorldData } from "./map";
 import { formatPopulation, fmt, pct, compact } from "./format";
 import { PopulationChart, ChangeChart, type ChangeMode } from "./charts";
@@ -48,8 +49,7 @@ class App {
   private details: Details;
   // chart position: follows the map, gliding when it jumps to a new place
   private anchorTarget = { x: 0, y: 0 };
-  private anchorShown = { x: 0, y: 0 };
-  private glideUntil = 0;
+  private motion = new ChartMotion(() => reducedMotion.matches);
   private yearPicker!: YearPicker;
   private chartDrag: { dx: number; dy: number; id: number } | null = null;
   private chartMoved = false;
@@ -62,13 +62,15 @@ class App {
     this.year = y >= data.yearStart && y <= data.yearEnd ? Math.round(y) : data.lastEstimate;
     this.yearShown = this.year;
 
-    this.glyph = new Glyph($<HTMLElement>("glyph") as unknown as SVGSVGElement, data.ages, data.fertAges, (row, x, y) => this.tooltip(row, x, y));
+    this.glyph = new Glyph($<HTMLElement>("glyph") as unknown as SVGSVGElement, worldArms(data.ages, data.fertAges), (row, x, y) => this.tooltip(row, x, y));
     this.map = new WorldMap($<HTMLCanvasElement>("map"), world, (x, y, offHome) => {
       this.anchorTarget = { x, y };
       if (this.chartDrag) return; // the chart follows the pointer while it is being dragged
-      if (performance.now() < this.glideUntil) this.kick();
-      else {
-        this.anchorShown = { x, y };
+      if (this.motion.active) {
+        this.motion.follow(x, y);
+        this.kick();
+      } else {
+        this.motion.snap(x, y);
         this.glyph.setAnchor(x, y);
         this.yearPicker?.place(x, y + this.glyph.pickerOffset);
       }
@@ -108,7 +110,7 @@ class App {
   private setPrimary(place: Place, stay = false) {
     if (this.compare?.code === place.code) this.compare = null;
     this.primary = place;
-    if (stay) this.glideUntil = performance.now() + 700;
+    if (stay && !this.chartDrag) this.motion.active = true; // glide to the place instead of jumping
     this.updatePlace(true, stay);
   }
 
@@ -181,14 +183,12 @@ class App {
     moving = this.approach(this.shown, this.target, k) || moving;
     if (this.compare) moving = this.approach(this.cmpShown, this.cmpTarget, k) || moving;
 
-    if (!this.chartDrag && (this.anchorShown.x !== this.anchorTarget.x || this.anchorShown.y !== this.anchorTarget.y)) {
-      const kk = reducedMotion.matches || now > this.glideUntil ? 1 : 1 - Math.exp(-dt / 90);
-      const dx = this.anchorTarget.x - this.anchorShown.x, dy = this.anchorTarget.y - this.anchorShown.y;
-      if (Math.hypot(dx, dy) < 0.5) this.anchorShown = { ...this.anchorTarget };
-      else (this.anchorShown.x += dx * kk), (this.anchorShown.y += dy * kk), (moving = true);
-      this.glyph.setAnchor(this.anchorShown.x, this.anchorShown.y);
+    if (this.motion.active) {
+      moving = this.motion.step(dt) || moving;
+      this.glyph.setAnchor(this.motion.x, this.motion.y);
+      this.glyph.setMotion(this.motion.tilt, this.motion.lift);
     }
-    this.glyph.set(this.shown, this.compare ? this.cmpShown : null);
+    this.glyph.set(profileArms(this.shown), this.compare ? profileArms(this.cmpShown) : null);
     this.yearPicker.place(this.glyph.cx, this.glyph.cy + this.glyph.pickerOffset);
     this.glyph.setProjection(this.yearShown > this.data.lastEstimate + 0.5);
     this.updateTime();
@@ -463,9 +463,9 @@ class App {
         }
         if (!this.chartMoved) return;
         const x = p.x + this.chartDrag.dx, y = p.y + this.chartDrag.dy;
-        this.anchorShown = { x, y };
-        this.glyph.setAnchor(x, y);
-        this.yearPicker.place(x, y + this.glyph.pickerOffset);
+        this.motion.dragging = true;
+        this.motion.follow(x, y);
+        this.kick();
         const code = this.map.pickAt(x, y);
         const place = code === null ? undefined : this.data.byCode(code);
         if (place && place.code !== this.primary.code) this.setPrimary(place, true);
@@ -505,8 +505,10 @@ class App {
         this.chartDrag = null;
         stage.classList.remove("is-dragging-chart");
         if (moved) {
-          // settle onto the country that was chosen
-          this.glideUntil = performance.now() + 700;
+          // settle onto the country that was chosen with a soft bounce
+          this.motion.dragging = false;
+          this.motion.follow(this.anchorTarget.x, this.anchorTarget.y);
+          this.kick();
           this.map.refresh();
           drag = null;
           return;

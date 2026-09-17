@@ -1,0 +1,158 @@
+/* Pakistan districts page */
+:root {
+  --choro-0: #f3f4ef;
+  --choro-1: #6f9aa8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --choro-0: #1b282e;
+    --choro-1: #4d8594;
+  }
+}
+:root[data-theme="dark"] {
+  --choro-0: #1b282e;
+  --choro-1: #4d8594;
+}
+
+.census-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  pointer-events: none;
+  will-change: transform;
+  text-shadow: 0 0 4px var(--ocean), 0 0 8px var(--ocean);
+}
+.cb-title {
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.cb-sub {
+  font-size: 12px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.kind-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--highlight);
+  background: var(--land);
+  font-size: 13.5px;
+}
+.pk-select {
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+.choro-legend {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.choro-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.choro-legend i {
+  width: 26px;
+  height: 14px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 15%, transparent);
+}
+.rank-sub {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.rank-list {
+  max-height: 340px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+.rank-list button {
+  display: grid;
+  grid-template-columns: minmax(90px, 1.1fr) 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 30px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  text-align: left;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.rank-list button:hover {
+  background: var(--land);
+}
+.rk-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rk-name small {
+  color: var(--ink-2);
+  font-size: 11px;
+}
+.rk-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.rk-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--choro-1);
+  opacity: 0.75;
+}
+.rk-val {
+  min-width: 52px;
+  text-align: right;
+}
+.rank-list .is-sel button {
+  background: color-mix(in srgb, var(--highlight) 30%, transparent);
+  font-weight: 600;
+}
+.rank-list .is-sel .rk-bar i {
+  background: var(--ink);
+  opacity: 1;
+}
+.rank-list .is-cmp button {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.rank-list .is-neg .rk-bar i {
+  background: var(--loss);
+}
+.tehsils {
+  margin: 0;
+  font-size: 14px;
+}
+.d-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.d-table th.sortable:hover {
+  color: var(--ink);
+}

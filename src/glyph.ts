@@ -10,11 +10,10 @@ import { AGE_GROUPS, FERT_GROUPS, type Profile } from "./data";
 const SVG = "http://www.w3.org/2000/svg";
 const SQ3 = Math.sqrt(3);
 
-type Key = "pop" | "deaths" | "fert";
-
-interface ArmSpec {
-  key: Key;
+export interface ArmSpec {
+  key: string;
   title: string;
+  labels: string[]; // one per age group, youngest first
   rotate: number; // degrees; local -y points outward
   groups: number;
   step: number;
@@ -22,14 +21,24 @@ interface ArmSpec {
   max: number; // value at the triangle vertex
   ticks: number[];
   symmetric: boolean;
+  /** text shown when every value is zero, e.g. "No rural population" */
+  emptyText?: string;
+  /** the two upper arms shorten on narrow screens */
+  adaptive?: boolean;
 }
 
-// step/thickness of the two age arms are recomputed on resize to fit narrow screens
-const ARMS: ArmSpec[] = [
-  { key: "pop", title: "Population", rotate: -60, groups: AGE_GROUPS, step: 0.2, thickness: 0.15, max: 12, ticks: [4, 8], symmetric: false },
-  { key: "deaths", title: "Deaths", rotate: 60, groups: AGE_GROUPS, step: 0.2, thickness: 0.15, max: 42, ticks: [14, 28], symmetric: false },
-  { key: "fert", title: "Births by mother's age", rotate: 180, groups: FERT_GROUPS, step: 0.34, thickness: 0.26, max: 48, ticks: [16, 32], symmetric: true },
-];
+export type ArmValues = Record<string, [Float64Array, Float64Array]>;
+
+/** Arms of the world atlas: population, deaths, births by mother's age. */
+export function worldArms(ages: string[], fertAges: string[]): ArmSpec[] {
+  return [
+    { key: "pop", title: "Population", labels: ages, rotate: -60, groups: AGE_GROUPS, step: 0.2, thickness: 0.15, max: 12, ticks: [4, 8], symmetric: false, adaptive: true },
+    { key: "deaths", title: "Deaths", labels: ages, rotate: 60, groups: AGE_GROUPS, step: 0.2, thickness: 0.15, max: 42, ticks: [14, 28], symmetric: false, adaptive: true },
+    { key: "fert", title: "Births by mother's age", labels: fertAges, rotate: 180, groups: FERT_GROUPS, step: 0.34, thickness: 0.26, max: 48, ticks: [16, 32], symmetric: true },
+  ];
+}
+
+export const profileArms = (p: Profile): ArmValues => ({ pop: [p.popM, p.popF], deaths: [p.deathsM, p.deathsF], fert: [p.fert, p.fert] });
 const GAP = 0.1;
 
 export interface ReadoutRow {
@@ -52,6 +61,8 @@ const el = <K extends keyof SVGElementTagNameMap>(name: K, attrs: Record<string,
 interface ArmNodes {
   spec: ArmSpec;
   g: SVGGElement;
+  empty?: SVGTextElement;
+  ageLabels?: SVGTextElement[];
   left: SVGRectElement[];
   right: SVGRectElement[];
   cLeft: SVGRectElement[];
@@ -74,10 +85,12 @@ export class Glyph {
   /** where the glyph is drawn now; follows the selected place while the map moves */
   cx = 0;
   cy = 0;
-  private data: Record<Key, [Float64Array, Float64Array]> | null = null;
-  private cmp: Record<Key, [Float64Array, Float64Array]> | null = null;
+  private data: ArmValues | null = null;
+  private cmp: ArmValues | null = null;
+  private tilt = 0;
+  private lift = 1;
 
-  constructor(svg: SVGSVGElement, private ages: string[], private fertAges: string[], private onHover: (row: ReadoutRow | null, x: number, y: number) => void) {
+  constructor(svg: SVGSVGElement, private specs: ArmSpec[], private onHover: (row: ReadoutRow | null, x: number, y: number) => void) {
     this.svg = svg;
     const defs = el("defs", {}, svg);
     for (const [id, color] of [["hatch-m", "var(--male)"], ["hatch-f", "var(--female)"]]) {
@@ -87,7 +100,7 @@ export class Glyph {
     }
     this.root = el("g", {}, svg);
     this.frame = el("g", { class: "g-frame" }, this.root);
-    for (const spec of ARMS) {
+    for (const spec of specs) {
       const g = el("g", { class: `g-arm g-${spec.key}` }, this.root);
       const mk = (cls: string) => Array.from({ length: spec.groups }, () => el("rect", { class: cls }, g));
       const arm: ArmNodes = { spec, g, left: mk("bar bar-m"), right: mk("bar bar-f"), cLeft: [], cRight: [] };
@@ -108,8 +121,8 @@ export class Glyph {
     const u = Math.max(22, Math.min(avail / 7.9, w / 7.4, 120));
     // shorten the age arms on narrow screens so their tips stay on screen
     const reach = ((w / 2 - 10) / u - 0.45) / 0.866; // centre-to-tip distance that fits
-    const step = Math.min(0.2, Math.max(0.11, (reach - 1 - GAP) / AGE_GROUPS));
-    for (const arm of this.arms.slice(0, 2)) {
+    for (const arm of this.arms.filter((a) => a.spec.adaptive)) {
+      const step = Math.min(0.2 * (20 / arm.spec.groups), Math.max(0.11 * (20 / arm.spec.groups), (reach - 1 - GAP) / arm.spec.groups));
       arm.spec.step = step;
       arm.spec.thickness = step * 0.76;
     }
@@ -127,7 +140,20 @@ export class Glyph {
     if (Math.abs(x - this.cx) < 0.05 && Math.abs(y - this.cy) < 0.05 && this.root.hasAttribute("transform")) return;
     this.cx = x;
     this.cy = y;
-    this.root.setAttribute("transform", `translate(${x.toFixed(1)},${y.toFixed(1)})`);
+    this.applyTransform();
+  }
+
+  /** Tilt (degrees) and lift (scale) while the chart is being dragged. */
+  setMotion(tilt: number, lift: number) {
+    if (Math.abs(tilt - this.tilt) < 0.02 && Math.abs(lift - this.lift) < 0.0005) return;
+    this.tilt = tilt;
+    this.lift = lift;
+    this.applyTransform();
+  }
+
+  private applyTransform() {
+    const extra = this.tilt || this.lift !== 1 ? ` rotate(${this.tilt.toFixed(2)}) scale(${this.lift.toFixed(4)})` : "";
+    this.root.setAttribute("transform", `translate(${this.cx.toFixed(1)},${this.cy.toFixed(1)})${extra}`);
   }
 
   get lensRadius() {
@@ -145,6 +171,7 @@ export class Glyph {
     const fs = Math.max(8.5, Math.min(12.5, u * 0.19));
     for (const arm of this.arms) {
       const { spec, g } = arm;
+      arm.ageLabels = [];
       const r = spec.rotate;
       const flip = Math.abs(r) === 180;
       g.setAttribute("transform", `rotate(${r})`);
@@ -168,6 +195,14 @@ export class Glyph {
       const rr = (r * Math.PI) / 180;
       const title = el("text", { class: "g-title", "font-size": fs * 1.3, "dominant-baseline": "central" }, this.labels);
       title.textContent = spec.title;
+      // shown instead of bars when an area has no people (e.g. no rural population)
+      if (spec.emptyText) {
+      const mid = (1 + GAP + (spec.groups / 2) * spec.step) * u;
+      const rad0 = (r * Math.PI) / 180;
+      arm.empty = el("text", { class: "g-empty", "text-anchor": "middle", "dominant-baseline": "central", "font-size": fs, x: (mid * Math.sin(rad0)).toFixed(1), y: (-mid * Math.cos(rad0)).toFixed(1) }, this.labels);
+      arm.empty.textContent = spec.emptyText;
+      arm.empty.style.display = "none";
+      }
       if (spec.symmetric) {
         Object.entries({ x: 0, y: tip + 0.42 * u, "text-anchor": "middle" }).forEach(([k, v]) => title.setAttribute(k, String(v)));
       } else {
@@ -181,9 +216,9 @@ export class Glyph {
       }
       // age labels along the arm centre line, kept upright
       const every = [2, 4, 6].find((n) => n * spec.step * u >= 44) ?? 6;
-      const names = spec.symmetric ? this.fertAges : this.ages;
+      const names = spec.labels;
       const rad = (r * Math.PI) / 180;
-      let rot = spec.symmetric ? 0 : r - 90;
+      let rot = spec.symmetric || Math.abs(r) === 180 ? 0 : r - 90;
       if (rot < -90) rot += 180;
       for (let k = 0; k < spec.groups; k++) {
         if (!spec.symmetric && k % every !== 1) continue;
@@ -191,15 +226,16 @@ export class Glyph {
         const px = d * Math.sin(rad), py = -d * Math.cos(rad);
         const lab = el("text", { class: "g-age", "text-anchor": "middle", "dominant-baseline": "central", "font-size": fs * 0.85, transform: `translate(${px},${py}) rotate(${rot})` }, this.labels);
         lab.textContent = names[k];
+        (arm.ageLabels ??= []).push(lab);
       }
     }
     // the year picker (HTML) sits just below the births title
-    this.pickerOffset = (1 + GAP + FERT_GROUPS * ARMS[2].step) * u + 0.72 * u;
+    this.pickerOffset = (1 + GAP + this.specs[2].groups * this.specs[2].step) * u + 0.72 * u;
   }
 
-  set(primary: Profile, compare: Profile | null) {
-    this.data = { pop: [primary.popM, primary.popF], deaths: [primary.deathsM, primary.deathsF], fert: [primary.fert, primary.fert] };
-    this.cmp = compare ? { pop: [compare.popM, compare.popF], deaths: [compare.deathsM, compare.deathsF], fert: [compare.fert, compare.fert] } : null;
+  set(primary: ArmValues, compare: ArmValues | null) {
+    this.data = primary;
+    this.cmp = compare;
     this.draw();
   }
 
@@ -214,6 +250,13 @@ export class Glyph {
       const { spec } = arm;
       const [L, R] = this.data[spec.key];
       const cmp = this.cmp?.[spec.key];
+      if (arm.empty) {
+        let sum = 0;
+        for (let i = 0; i < spec.groups; i++) sum += (L[i] || 0) + (R[i] || 0);
+        const none = sum <= 0.01;
+        arm.empty.style.display = none ? "" : "none";
+        for (const lab of arm.ageLabels ?? []) lab.style.display = none ? "none" : "";
+      }
       const k = (SQ3 * u) / spec.max;
       const h = spec.thickness * u;
       for (let i = 0; i < spec.groups; i++) {
@@ -276,7 +319,7 @@ export class Glyph {
       this.onHover(
         {
           arm: spec.title,
-          age: spec.symmetric ? this.fertAges[i] : this.ages[i],
+          age: spec.labels[i],
           left: L[i],
           right: R[i],
           cLeft: cmp ? cmp[0][i] : NaN,
