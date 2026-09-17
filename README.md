@@ -16,6 +16,7 @@ Years up to 2023 are UN estimates. Later years are the UN median projection and 
 - Play button that animates 150 years of change smoothly
 - Compare mode: overlay a second place as outlines
 - Median age, births per woman, life expectancy and old-age dependency for every year
+- Top 10 tour: flies smoothly through the ten most populated countries (or Pakistan districts), with a caption and progress bar; touching the map stops it
 - One search box on both pages for countries, regions, Pakistan districts and tehsils, with suggestions and completion while typing (press / to jump to it)
 - Explore the map freely: drag to move it (with momentum), scroll or pinch to zoom, double-click or double-tap any country to open its profile
 - Grab the triangle and drop it on any country: the chart follows the cursor and switches country as it passes over them
@@ -82,6 +83,7 @@ src/pk/                    Pakistan districts page
 pipeline/build_pakistan.py PBS Census 2023 + OCHA boundaries -> public/data/pakistan.json
 scripts/build-search.mjs   search index for both pages -> public/data/search.json
 src/search.ts              search box with suggestions
+src/tour.ts                top 10 tour
 src/map.ts                 draws the map; drag, inertia, zoom and fly-to (Canvas, d3-geo)
 src/main.ts                app state, controls, search, comparison, links
 src/styles.css             layout and theme

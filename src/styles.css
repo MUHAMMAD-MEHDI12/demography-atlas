@@ -121,10 +121,129 @@ button {
   overflow: visible;
   will-change: transform;
 }
-.recenter {
+.tour-btn {
   position: absolute;
   right: 12px;
   bottom: 34px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+  font-weight: 500;
+  box-shadow: 0 6px 18px -10px rgb(10 30 40 / 0.5);
+}
+.tour-btn svg {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tour-btn svg circle {
+  fill: var(--highlight);
+  stroke: none;
+}
+.tour-btn.is-on {
+  background: var(--ink);
+  color: var(--panel);
+  border-color: var(--ink);
+}
+.tour-btn.is-on svg {
+  stroke: var(--panel);
+}
+.tour-caption {
+  position: absolute;
+  left: 12px;
+  bottom: 34px;
+  z-index: 4;
+  display: grid;
+  gap: 2px;
+  width: min(290px, calc(100% - 24px));
+  padding: 10px 14px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  box-shadow: 0 12px 30px -16px rgb(10 30 40 / 0.6);
+  animation: tour-in 0.35s ease-out;
+}
+@keyframes tour-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+@media (max-width: 620px) {
+  /* phones: a slim card under the header, clear of the year picker */
+  .tour-caption {
+    top: calc(var(--head-h, 120px) + 6px);
+    bottom: auto;
+    left: 12px;
+    right: 58px;
+    width: auto;
+    padding: 7px 12px 9px;
+  }
+  .tc-title {
+    font-size: 18px !important;
+  }
+}
+.tc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tc-rank {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.tc-close {
+  width: 28px;
+  height: 28px;
+  margin: -6px -8px -6px 0;
+  border: 0;
+  background: none;
+  font-size: 18px;
+  color: var(--ink-2);
+}
+.tc-title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1.15;
+}
+.tc-detail {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.tc-progress {
+  height: 3px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.tc-progress i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--highlight);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-caption {
+    animation: none;
+  }
+}
+.recenter {
+  position: absolute;
+  right: 12px;
+  bottom: 80px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -644,6 +763,22 @@ button {
   display: none;
 }
 @media (max-width: 620px) {
+  /* phones: a round icon button under the header, away from the chart labels */
+  .tour-btn {
+    top: calc(var(--head-h, 120px) + 6px);
+    bottom: auto;
+    width: 38px;
+    min-height: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+  .tour-btn .tb-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
   .recenter {
     bottom: 56px;
   }

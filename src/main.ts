@@ -9,6 +9,7 @@ import { SITE } from "./site";
 import { Details } from "./details";
 import { YearPicker } from "./yearpicker";
 import { SearchBox, searchMarkup } from "./search";
+import { Tour, tourMarkup } from "./tour";
 
 declare global {
   interface Window {
@@ -18,7 +19,7 @@ declare global {
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-const PLAY_SPEED = 9; // years per second
+const PLAY_SPEED = 4; // years per second
 
 async function loadWorld(): Promise<WorldData> {
   if (window.__WORLD__) return window.__WORLD__;
@@ -52,6 +53,7 @@ class App {
   private anchorTarget = { x: 0, y: 0 };
   private motion = new ChartMotion(() => reducedMotion.matches);
   private yearPicker!: YearPicker;
+  private tour!: Tour;
   private chartDrag: { dx: number; dy: number; id: number } | null = null;
   private chartMoved = false;
 
@@ -99,12 +101,40 @@ class App {
     this.buildPicker();
     $("search").innerHTML = searchMarkup;
     new SearchBox($("search"), (item) => {
+      this.tour.stop();
       if (item.d) location.href = `./pakistan.html#d=${item.d}`; // district or tehsil: open the Pakistan section
       else {
         const place = item.c === undefined ? undefined : this.data.byCode(item.c);
         if (place) this.setPrimary(place);
       }
     });
+    const tm = tourMarkup("Top 10 countries");
+    $("tour-btn").innerHTML = tm.button;
+    $("tour-caption").innerHTML = tm.caption;
+    this.tour = new Tour(
+      $<HTMLButtonElement>("tour-btn"),
+      $("tour-caption"),
+      () => {
+        const y = Math.round(this.year);
+        return this.data.places
+          .filter((p) => p.area !== "Aggregate")
+          .map((p) => ({ p, pop: this.data.annualFigures(p.index, y)?.population ?? NaN }))
+          .filter((r) => Number.isFinite(r.pop))
+          .sort((a, b) => b.pop - a.pop)
+          .slice(0, 10)
+          .map(({ p, pop }) => ({
+            title: p.name,
+            detail: `${compact(pop, true)} people in ${y}`,
+            go: () => {
+              this.setPlaying(false);
+              this.compare = null;
+              this.setPrimary(p);
+              return this.map.lastFlightMs;
+            },
+          }));
+      },
+      "Top 10 countries",
+    );
     new ResizeObserver(() => this.resize()).observe($("stage"));
     this.resize();
 
@@ -182,12 +212,12 @@ class App {
     } else {
       // glide through the in-between years instead of jumping
       const d = this.year - this.yearShown;
-      this.yearShown = reduce || Math.abs(d) < 0.002 ? this.year : this.yearShown + d * (1 - Math.exp(-dt / 110));
+      this.yearShown = reduce || Math.abs(d) < 0.002 ? this.year : this.yearShown + d * (1 - Math.exp(-dt / 180));
     }
     this.data.profile(this.primary.index, this.yearShown, this.target);
     if (this.compare) this.data.profile(this.compare.index, this.yearShown, this.cmpTarget);
 
-    const k = reduce ? 1 : 1 - Math.exp(-dt / 120);
+    const k = reduce ? 1 : 1 - Math.exp(-dt / 220);
     let moving = this.yearShown !== this.year;
     moving = this.approach(this.shown, this.target, k) || moving;
     if (this.compare) moving = this.approach(this.cmpShown, this.cmpTarget, k) || moving;
@@ -428,7 +458,8 @@ class App {
     };
 
     stage.addEventListener("pointerdown", (e) => {
-      if ((e.target as Element).closest("button, a, input, .search, .legend, .tooltip, .year-picker")) return;
+      if ((e.target as Element).closest("button, a, input, .search, .legend, .tooltip, .year-picker, .tour-caption")) return;
+      this.tour.stop(); // the user takes over
       try {
         stage.setPointerCapture(e.pointerId);
       } catch {
@@ -573,6 +604,7 @@ class App {
     const { width, height } = stage.getBoundingClientRect();
     if (!width || !height) return;
     const headH = ($("stage").querySelector(".head") as HTMLElement).offsetHeight;
+    stage.style.setProperty("--head-h", `${headH}px`);
     const legend = stage.querySelector(".legend") as HTMLElement;
     const bottomH = height - legend.offsetTop + 6;
     this.glyph.resize(width, height, headH, bottomH, $("year-picker").offsetHeight);
@@ -645,6 +677,7 @@ class App {
   }
 
   private openPicker(mode: "place" | "compare") {
+    this.tour.stop();
     this.pickerMode = mode;
     $("picker-title").textContent = mode === "place" ? "Choose a place" : `Compare ${this.primary.name} with`;
     const input = $<HTMLInputElement>("picker-input");

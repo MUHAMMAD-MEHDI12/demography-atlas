@@ -6,6 +6,7 @@ import { ChartMotion } from "../motion";
 import { fmt, compact } from "../format";
 import { SITE } from "../site";
 import { SearchBox, searchMarkup } from "../search";
+import { Tour, tourMarkup } from "../tour";
 import { loadPakistan, shapes, breaks, classOf, ramp, value, INDICATORS, type District, type Indicator, type PakistanData } from "./data";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -74,6 +75,7 @@ class PakistanApp {
   private sort: { key: string; dir: number } = { key: "population", dir: -1 };
   private csv: { name: string; rows: (string | number)[][] } = { name: "", rows: [] };
   private rankByPop = new Map<number, number>();
+  private tour!: Tour;
 
   constructor(private data: PakistanData, world: WorldData) {
     this.units = data.units;
@@ -126,12 +128,34 @@ class PakistanApp {
     this.buildPicker();
     $("search").innerHTML = searchMarkup;
     new SearchBox($("search"), (item) => {
+      this.tour.stop();
       if (item.c !== undefined) location.href = `./index.html#place=${item.c}`; // country: open the world atlas
       else {
         const u = this.units.find((x) => slug(x.name) === item.d);
         if (u) this.setPrimary(u, "fly");
       }
     });
+    const tm = tourMarkup("Top 10 districts");
+    $("tour-btn").innerHTML = tm.button;
+    $("tour-caption").innerHTML = tm.caption;
+    this.tour = new Tour(
+      $<HTMLButtonElement>("tour-btn"),
+      $("tour-caption"),
+      () =>
+        [...this.units]
+          .sort((a, b) => b.population - a.population)
+          .slice(0, 10)
+          .map((u) => ({
+            title: u.name,
+            detail: `${compact(u.population, true)} people, ${u.province}`,
+            go: () => {
+              this.compare = null;
+              this.setPrimary(u, "fly");
+              return this.map.lastFlightMs;
+            },
+          })),
+      "Top 10 districts",
+    );
     this.renderSiteInfo();
     new ResizeObserver(() => this.resize()).observe($("stage"));
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
@@ -196,7 +220,7 @@ class PakistanApp {
   private frame(now: number) {
     const dt = Math.min(now - this.last, 64);
     this.last = now;
-    const k = reducedMotion.matches ? 1 : 1 - Math.exp(-dt / 120);
+    const k = reducedMotion.matches ? 1 : 1 - Math.exp(-dt / 220);
     let moving = this.approach(this.shown, this.target, k);
     if (this.compare) moving = this.approach(this.cmpShown, this.cmpTarget, k) || moving;
     if (this.motion.active) {
@@ -234,6 +258,7 @@ class PakistanApp {
     const { width, height } = stage.getBoundingClientRect();
     if (!width || !height) return;
     const headH = (stage.querySelector(".head") as HTMLElement).offsetHeight;
+    stage.style.setProperty("--head-h", `${headH}px`);
     const legend = stage.querySelector(".legend") as HTMLElement;
     this.glyph.resize(width, height, headH, height - legend.offsetTop + 6, $("census-badge").offsetHeight);
     this.map.resize(width, height, this.glyph.homeX, this.glyph.homeY, this.glyph.lensRadius);
@@ -393,6 +418,7 @@ class PakistanApp {
     });
     this.renderLegend();
     $("rank-list").addEventListener("click", (e) => {
+      this.tour.stop();
       const id = (e.target as Element).closest<HTMLElement>("[data-id]")?.dataset.id;
       const u = id ? this.byId.get(Number(id)) : undefined;
       if (u) this.setPrimary(u, "fly");
@@ -448,7 +474,8 @@ class PakistanApp {
     };
 
     stage.addEventListener("pointerdown", (e) => {
-      if ((e.target as Element).closest("button, a, input, .search, .legend, .tooltip")) return;
+      if ((e.target as Element).closest("button, a, input, .search, .legend, .tooltip, .tour-caption")) return;
+      this.tour.stop(); // the user takes over
       try {
         stage.setPointerCapture(e.pointerId);
       } catch {
@@ -645,6 +672,7 @@ class PakistanApp {
   }
 
   private openPicker(mode: "place" | "compare") {
+    this.tour.stop();
     this.pickerMode = mode;
     $("picker-title").textContent = mode === "place" ? "Choose a district" : `Compare ${this.primary.name} with`;
     const input = $<HTMLInputElement>("picker-input");

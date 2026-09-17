@@ -35,7 +35,7 @@ export class ChartMotion {
   step(dtMs: number): boolean {
     if (!this.active) return false;
     // stiffer while held so it keeps up with the hand, softer when settling
-    const k = this.dragging ? 900 : 240;
+    const k = this.dragging ? 900 : 150;
     const c = 2 * Math.sqrt(k) * (this.dragging ? 0.78 : 0.62);
     let left = Math.min(dtMs, 64) / 1000;
     while (left > 0) {

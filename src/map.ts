@@ -74,6 +74,8 @@ export class WorldMap {
   private raf = 0;
   private last = 0;
   private flight: { from: View; to: View; dLon: number; t0: number; ms: number } | null = null;
+  /** duration of the most recent fly-to, so a tour can wait for it */
+  lastFlightMs = 0;
   private velocity = { x: 0, y: 0 };
   private zoomTarget: { scale: number; x: number; y: number } | null = null;
 
@@ -155,6 +157,7 @@ export class WorldMap {
    */
   select(primary: number, compare: number | null, members: (code: number) => number[], animate: boolean, stay = false) {
     const moved = primary !== this.selectedCode;
+    this.lastFlightMs = 0;
     this.selectedCode = primary;
     this.selected = new Set(members(primary));
     this.compared = new Set(compare === null ? [] : members(compare));
@@ -193,6 +196,7 @@ export class WorldMap {
   flyTo(target: View, animate: boolean) {
     this.stop();
     if (!animate || !this.w) {
+      this.lastFlightMs = 0;
       this.view = { ...target };
       this.requestFrame();
       return;
@@ -201,7 +205,8 @@ export class WorldMap {
     if (dLon > 180) dLon -= 360;
     if (dLon < -180) dLon += 360;
     const dist = Math.hypot(dLon, target.lat - this.view.lat);
-    const ms = 700 + Math.min(dist, 180) * 3.5;
+    const ms = 1300 + Math.min(dist, 180) * 6;
+    this.lastFlightMs = ms;
     this.flight = { from: { ...this.view }, to: target, dLon, t0: performance.now(), ms };
     this.requestFrame();
   }
