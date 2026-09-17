@@ -545,7 +545,7 @@ class PakistanApp {
         if (isDouble) {
           const u = at(p.x, p.y);
           if (u) this.setPrimary(u, "stay");
-        } else if (!this.glyph.hit(e)) this.tooltip(null, 0, 0);
+        } else if (!this.glyph.hit(e)) { this.tooltip(null, 0, 0); const u = at(p.x, p.y); if (u && u.id !== this.primary.id) this.setPrimary(u, "stay"); }
       }
       drag = null;
     };

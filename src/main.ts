@@ -419,7 +419,7 @@ class App {
     };
 
     stage.addEventListener("pointerdown", (e) => {
-      if ((e.target as Element).closest("button, .legend, .tooltip, .year-picker")) return;
+      if ((e.target as Element).closest("button, a, .legend, .tooltip, .year-picker")) return;
       try {
         stage.setPointerCapture(e.pointerId);
       } catch {
@@ -533,7 +533,7 @@ class App {
             clearTimeout(hideTimer);
             hideTimer = window.setTimeout(() => this.tooltip(null, 0, 0), 3000);
           }
-        } else this.tooltip(null, 0, 0);
+        } else { this.tooltip(null, 0, 0); openAt(p.x, p.y); }
       }
       drag = null;
     };
