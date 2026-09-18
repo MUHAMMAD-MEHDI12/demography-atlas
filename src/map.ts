@@ -426,19 +426,13 @@ export class WorldMap {
     // Focus effect: vignette + glow when a selection is active
     const sel = this.features.filter((f) => this.selected.has(Number(f.id)));
     if (sel.length) {
-      // Step 1: dim all non-selected countries
-      for (const f of this.features) {
-        const id = Number(f.id);
-        if (this.selected.has(id) || this.compared.has(id)) continue;
-        ctx.beginPath();
-        path(f);
-        ctx.fillStyle = c.ocean;
-        ctx.globalAlpha = 0.5;
-        ctx.fill();
-      }
+      // 1) full-screen dark wash
+      ctx.fillStyle = c.ocean;
+      ctx.globalAlpha = 0.55;
+      ctx.fillRect(0, 0, this.w, this.h);
       ctx.globalAlpha = 1;
 
-      // Step 2: radial vignette — darkens outward from selection
+      // 2) compute the bounding-box centre of the selected features on screen
       let minX = this.w, minY = this.h, maxX = 0, maxY = 0;
       for (const f of sel) {
         const b = path.bounds(f);
@@ -450,35 +444,37 @@ export class WorldMap {
       const cx = (minX + maxX) / 2;
       const cy = (minY + maxY) / 2;
       const featureRadius = Math.max(maxX - minX, maxY - minY) / 2;
-      const innerR = featureRadius * 1.8;
-      const outerR = Math.max(this.w, this.h) * 0.75;
+      const innerR = featureRadius * 1.1;
+      const outerR = featureRadius * 4.5;
 
+      // 3) radial gradient: punch a bright hole over the selection
       const vig = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
       vig.addColorStop(0, "rgba(0,0,0,0)");
-      vig.addColorStop(0.3, "rgba(0,0,0,0)");
-      vig.addColorStop(0.7, "rgba(0,0,0,0.15)");
-      vig.addColorStop(1, "rgba(0,0,0,0.35)");
+      vig.addColorStop(0.35, "rgba(0,0,0,0)");
+      vig.addColorStop(1, "rgba(0,0,0,0.45)");
+      ctx.globalCompositeOperation = "destination-out";
       ctx.fillStyle = vig;
       ctx.fillRect(0, 0, this.w, this.h);
+      ctx.globalCompositeOperation = "source-over";
 
-      // Step 3: soft glow around selected
+      // 4) glow around selected
       ctx.save();
       ctx.beginPath();
       for (const f of sel) path(f);
       ctx.shadowColor = c.highlight;
-      ctx.shadowBlur = 20;
+      ctx.shadowBlur = 18;
       ctx.strokeStyle = c.highlight;
-      ctx.globalAlpha = 0.55;
+      ctx.globalAlpha = 0.6;
       ctx.lineWidth = 2.5;
       ctx.stroke();
       ctx.restore();
       ctx.globalAlpha = 1;
 
-      // Step 4: brighter fill on top
+      // 5) brighter fill on top
       ctx.beginPath();
       for (const f of sel) path(f);
       ctx.fillStyle = c.highlight;
-      ctx.globalAlpha = 0.3;
+      ctx.globalAlpha = 0.35;
       ctx.fill();
       ctx.globalAlpha = 1;
       ctx.strokeStyle = c.ink;
