@@ -487,11 +487,18 @@ class PakistanApp {
     const yearInput = $<HTMLInputElement>("year-input");
     yearInput.addEventListener("input", () => {
       const y = parseInt(yearInput.value, 10);
-      if (y >= 2017 && y <= 2050) {
+      if (y >= 1950 && y <= 2100) {
         this.year = y;
         this.updateYearProjection();
       }
     });
+    for (const btn of document.querySelectorAll<HTMLButtonElement>(".dock-tabs [role=tab]")) {
+      btn.addEventListener("click", () => {
+        for (const b of document.querySelectorAll<HTMLButtonElement>(".dock-tabs [role=tab]")) b.setAttribute("aria-selected", "false");
+        btn.setAttribute("aria-selected", "true");
+        for (const p of document.querySelectorAll<HTMLElement>(".dock-panel")) p.hidden = p.dataset.panel !== btn.dataset.tab;
+      });
+    }
     this.renderLegend();
     $("rank-list").addEventListener("click", (e) => {
       this.tour.stop();

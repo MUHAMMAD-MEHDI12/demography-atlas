@@ -24,6 +24,41 @@ const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const PLAY_SPEED = 4; // years per second
 const CURRENT_YEAR = new Date().getFullYear();
 
+/** GDP per capita (USD, 2023 estimates, World Bank). Key = ISO 3166-1 numeric code. */
+const GDP_PER_CAPITA: Record<number, number> = {
+  4: 5800, 8: 6769, 12: 5279, 16: 5043, 20: 15600, 22: 13760, 24: 1982, 32: 13651,
+  36: 67810, 40: 56902, 44: 31281, 48: 27045, 50: 2503, 52: 8480, 56: 53380,
+  60: 19800, 64: 3561, 68: 3600, 70: 7688, 72: 7780, 76: 18968, 84: 6000,
+  90: 2130, 96: 34550, 100: 12890, 104: 1148, 108: 221, 112: 7290, 116: 1762,
+  120: 1593, 124: 55266, 132: 1974, 140: 582, 144: 3354, 148: 697, 152: 17588,
+  156: 12720, 158: 33775, 170: 6131, 174: 1489, 178: 2630, 180: 579, 188: 13531,
+  191: 18250, 192: 9480, 196: 33406, 203: 30239, 204: 2403, 208: 67983,
+  214: 10121, 218: 6328, 222: 5202, 226: 6865, 231: 1145, 232: 564, 242: 5365,
+  246: 54093, 250: 44915, 262: 3307, 266: 8860, 268: 5492, 270: 844, 275: 1674,
+  276: 52824, 288: 2328, 296: 1799, 300: 20867, 320: 9637, 324: 1710, 328: 14747,
+  332: 1868, 340: 13532, 348: 18624, 352: 73461, 356: 2612, 360: 4920,
+  364: 4240, 368: 5150, 372: 103500, 376: 52544, 380: 37146, 384: 2549,
+  392: 33815, 398: 11959, 400: 4394, 404: 2099, 408: 1730, 410: 33147,
+  414: 42063, 417: 5076, 418: 2630, 422: 4944, 426: 1116, 428: 21335,
+  430: 1570, 434: 6358, 440: 23309, 442: 128070, 450: 516, 454: 818,
+  458: 13445, 462: 15240, 466: 885, 470: 33820, 478: 1696, 480: 10086,
+  484: 10948, 492: 45222, 496: 4568, 498: 5995, 499: 10540, 504: 3448,
+  508: 464, 512: 19750, 516: 4854, 520: 11290, 524: 1313, 528: 57101,
+  540: 3121, 548: 3249, 554: 48346, 558: 2141, 562: 585, 566: 1621,
+  578: 87922, 583: 3656, 586: 1511, 591: 15778, 598: 3426, 600: 5901,
+  604: 7186, 608: 3950, 616: 18321, 620: 24326, 626: 1563, 630: 14680,
+  634: 69027, 642: 15030, 643: 12195, 646: 837, 659: 19430, 660: 51063,
+  662: 11663, 670: 9016, 674: 3928, 678: 2357, 682: 32586, 686: 1606,
+  688: 9230, 690: 6141, 694: 847, 702: 65233, 703: 21231, 704: 4317,
+  705: 29291, 706: 430, 710: 6190, 716: 2847, 724: 32387, 728: 547, 729: 596,
+  732: 2150, 740: 8805, 748: 4028, 752: 69286, 756: 95911, 760: 534,
+  762: 1325, 764: 7233, 768: 913, 776: 6214, 780: 18414, 784: 50177,
+  788: 3806, 792: 13681, 795: 8184, 798: 2874, 800: 1663, 804: 5181,
+  807: 6813, 818: 3983, 826: 48866, 831: 52680, 832: 52680, 833: 52680,
+  834: 1099, 840: 80035, 854: 934, 858: 21577, 860: 2255, 862: 3750,
+  887: 594, 894: 517,
+};
+
 async function loadWorld(): Promise<WorldData> {
   if (window.__WORLD__) return window.__WORLD__;
   const res = await fetch(`${import.meta.env.BASE_URL}data/world.json`);
@@ -292,13 +327,17 @@ class App {
       return place?.area ?? NaN;
     };
     const fmtArea = (km2: number) => Number.isFinite(km2) ? `${Math.round(km2).toLocaleString("en")} km²` : "not available";
-    const rows: Record<string, (p: Profile) => string> = {
+    const world = this.data.places.find((p) => p.name === "World") ?? this.data.places[0];
+    const worldPop = this.data.profile(world.index, y)?.population ?? 1;
+    const rows: Record<string, (p: Profile, place?: Place) => string> = {
       population: (p) => formatPopulation(p.population),
       medianAge: (p) => `${fmt(p.medianAge, 1)} years`,
       tfr: (p) => fmt(p.tfr, 2),
       e0: (p) => `${fmt(p.e0, 1)} years`,
       oldAge: (p) => fmt(oldAgeDependency(p), 0),
-      area: () => fmtArea(getArea(this.primary.code)),
+      area: (_, place) => fmtArea(getArea(place?.code ?? this.primary.code)),
+      worldShare: (p) => `${fmt(p.population / worldPop * 100, 2)}%`,
+      gdp: (_, place) => GDP_PER_CAPITA[(place ?? this.primary).code] ? `$${GDP_PER_CAPITA[(place ?? this.primary).code]!.toLocaleString("en")}` : "not available",
     };
     for (const dd of document.querySelectorAll<HTMLElement>("#stats dd")) {
       const f = rows[dd.dataset.k!];
@@ -306,12 +345,12 @@ class App {
       dd.replaceChildren();
       const main = document.createElement("span");
       main.className = "v";
-      main.textContent = f(a);
+      main.textContent = f(a, this.primary);
       dd.append(main);
       if (b && this.compare) {
         const c = document.createElement("span");
         c.className = "c";
-        c.textContent = `${this.compare.name}: ${dd.dataset.k === "area" ? fmtArea(getArea(this.compare.code)) : f(b)}`;
+        c.textContent = `${this.compare.name}: ${dd.dataset.k === "area" ? fmtArea(getArea(this.compare.code)) : dd.dataset.k === "worldShare" ? `${fmt(b.population / worldPop * 100, 2)}%` : dd.dataset.k === "gdp" ? (GDP_PER_CAPITA[this.compare.code] ? `$${GDP_PER_CAPITA[this.compare.code]!.toLocaleString("en")}` : "not available") : f(b, this.compare)}`;
         dd.append(c);
       }
     }
@@ -441,6 +480,13 @@ class App {
       });
     }
     $("recenter").addEventListener("click", () => this.map.recenter(!reducedMotion.matches));
+    for (const btn of document.querySelectorAll<HTMLButtonElement>(".dock-tabs [role=tab]")) {
+      btn.addEventListener("click", () => {
+        for (const b of document.querySelectorAll<HTMLButtonElement>(".dock-tabs [role=tab]")) b.setAttribute("aria-selected", "false");
+        btn.setAttribute("aria-selected", "true");
+        for (const p of document.querySelectorAll<HTMLElement>(".dock-panel")) p.hidden = p.dataset.panel !== btn.dataset.tab;
+      });
+    }
     document.addEventListener("keydown", (e) => {
       if (e.target instanceof HTMLInputElement || $<HTMLDialogElement>("picker").open || this.details.isOpen) return;
       if (e.key === " " && !(e.target instanceof HTMLButtonElement)) {
