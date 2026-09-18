@@ -403,6 +403,7 @@ export class WorldMap {
       ctx.fill();
     }
     const fill = this.layer?.fill;
+    const focusMode = this.layer && this.selected.size > 0;
     if (fill) {
       for (const f of this.features) {
         ctx.beginPath();
@@ -421,6 +422,20 @@ export class WorldMap {
     ctx.strokeStyle = c.border;
     ctx.lineWidth = fill ? 0.5 : 0.6;
     ctx.stroke();
+
+    // Focus effect: dim non-selected districts when a selection is active
+    if (focusMode) {
+      for (const f of this.features) {
+        const id = Number(f.id);
+        if (this.selected.has(id) || this.compared.has(id)) continue;
+        ctx.beginPath();
+        path(f);
+        ctx.fillStyle = c.ocean;
+        ctx.globalAlpha = 0.45;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
 
     const sel = this.features.filter((f) => this.selected.has(Number(f.id)));
     if (sel.length) {

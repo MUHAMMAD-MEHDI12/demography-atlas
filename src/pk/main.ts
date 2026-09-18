@@ -8,8 +8,7 @@ import { SITE } from "../site";
 import { SearchBox, searchMarkup } from "../search";
 import { Tour, tourMarkup } from "../tour";
 import { initTheme } from "../theme";
-import { loadPakistan, shapes, breaks, classOf, ramp, value, INDICATORS, type District, type Indicator, type PakistanData } from "./data";
-import { captureStage, printStage, downloadBlob } from "../export";
+import { loadPakistan, shapes, breaks, classOf, ramp, value, valueAtYear, breaksFrom, INDICATORS, type District, type Indicator, type PakistanData } from "./data";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
@@ -84,6 +83,7 @@ class PakistanApp {
   private rankByPop = new Map<number, number>();
   private tour!: Tour;
   private flightMs: number | undefined; // shorter flights during the tour
+  private year = 2023;
 
   constructor(private data: PakistanData, world: WorldData) {
     this.units = data.units;
@@ -125,6 +125,16 @@ class PakistanApp {
         fill: (id) => {
           const u = this.byId.get(id);
           if (!u) return null;
+          if (this.indicator === "population") {
+            const proj = this.projectedPopulation(u, this.year);
+            const vals = this.units.map((x) => this.projectedPopulation(x, this.year)).filter((v): v is number => v !== null);
+            if (!vals.length || proj === null) return null;
+            const lo = Math.min(...vals), hi = Math.max(...vals);
+            const range = hi - lo || 1;
+            const norm = (proj - lo) / range;
+            const classIdx = Math.min(Math.floor(norm * this.colours.length), this.colours.length - 1);
+            return this.colours[classIdx];
+          }
           const v = value(u, this.indicator);
           return Number.isFinite(v) ? this.colours[classOf(v, this.cuts)] : null;
         },
@@ -284,17 +294,36 @@ class PakistanApp {
     this.kick();
   }
 
+  private updateYearProjection() {
+    this.recolour();
+    this.renderLegend();
+    this.renderRanking();
+    this.map.repaint();
+    this.renderStats();
+  }
+
+  private projectedPopulation(d: District, year: number): number | null {
+    return valueAtYear(d, year);
+  }
+
   // ---------- map colours --------------------------------------------------------------------
   private recolour() {
     const cs = getComputedStyle(document.documentElement);
     this.colours = ramp(cs.getPropertyValue("--choro-0").trim() || "#eef3f0", cs.getPropertyValue("--choro-1").trim() || "#1d5b73");
-    this.cuts = breaks(this.units, this.indicator);
+    if (this.indicator === "population" && this.year !== 2023) {
+      const projVals = this.units.map((u) => valueAtYear(u, this.year)).filter((v): v is number => v !== null);
+      this.cuts = breaksFrom(projVals);
+    } else {
+      this.cuts = breaks(this.units, this.indicator);
+    }
   }
 
   private renderLegend() {
     const info = INDICATORS[this.indicator];
     const f = (v: number) => (this.indicator === "population" ? compact(v) : fmt(v, info.digits === 0 ? 0 : Math.min(info.digits, 1)));
-    const vals = this.units.map((u) => value(u, this.indicator)).filter(Number.isFinite);
+    const useProj = this.indicator === "population" && this.year !== 2023;
+    const getVal = (u: District) => useProj ? this.projectedPopulation(u, this.year) : value(u, this.indicator);
+    const vals = this.units.map((u) => getVal(u)).filter((v): v is number => v !== null && Number.isFinite(v));
     const lo = Math.min(...vals), hi = Math.max(...vals);
     const edges = [lo, ...this.cuts, hi];
     $("choro-legend").innerHTML = this.colours
@@ -306,7 +335,14 @@ class PakistanApp {
   private renderStats() {
     const a = this.primary, b = this.compare;
     const rows: Record<string, (u: District) => string> = {
-      population: (u) => (u.population === null ? "not available" : `${compact(u.population, true)}${u.popYear && u.popYear !== 2023 ? ` (${u.popYear})` : ""}`),
+      population: (u) => {
+        if (this.year !== 2023) {
+          const proj = this.projectedPopulation(u, this.year);
+          if (proj === null) return "not available";
+          return `${compact(proj, true)} (${this.year})`;
+        }
+        return u.population === null ? "not available" : `${compact(u.population, true)}${u.popYear && u.popYear !== 2023 ? ` (${u.popYear})` : ""}`;
+      },
       growth: (u) => (u.growth === null ? "no data" : `${u.growth > 0 ? "+" : ""}${fmt(u.growth, 2)}%`),
       area: (u) => (u.area === null ? "not available" : `${int(u.area)} km²`),
       density: (u) => int(u.density),
@@ -448,6 +484,14 @@ class PakistanApp {
       this.renderRanking();
       this.map.repaint();
     });
+    const yearInput = $<HTMLInputElement>("year-input");
+    yearInput.addEventListener("input", () => {
+      const y = parseInt(yearInput.value, 10);
+      if (y >= 2017 && y <= 2050) {
+        this.year = y;
+        this.updateYearProjection();
+      }
+    });
     this.renderLegend();
     $("rank-list").addEventListener("click", (e) => {
       this.tour.stop();
@@ -484,12 +528,6 @@ class PakistanApp {
       });
     }
     $("details-csv").addEventListener("click", () => this.download());
-    $("export-png")?.addEventListener("click", async () => {
-      const blob = await captureStage(2);
-      const name = `humanscape-${slug(this.primary.name)}.png`;
-      downloadBlob(blob, name);
-    });
-    $("export-pdf")?.addEventListener("click", () => printStage());
   }
 
   private bindStage() {

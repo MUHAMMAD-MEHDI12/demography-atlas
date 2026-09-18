@@ -65,6 +65,14 @@
   font: inherit;
   font-size: 14px;
 }
+.year-input-wrap {
+  margin-top: 4px;
+}
+.year-note {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+}
 .choro-legend {
   display: grid;
   gap: 4px;

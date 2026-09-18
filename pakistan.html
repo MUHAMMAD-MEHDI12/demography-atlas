@@ -74,10 +74,6 @@
           <span>Detailed statistics</span>
           <small>Age tables for this district and a sortable table of every district</small>
         </button>
-        <div class="export-btns">
-          <button type="button" class="export-btn" id="export-png" title="Download as high-resolution PNG">PNG</button>
-          <button type="button" class="export-btn" id="export-pdf" title="Print / save as PDF">PDF</button>
-        </div>
 
         <section class="panel-block" aria-labelledby="colour-title">
           <div class="block-head">
@@ -91,6 +87,14 @@
             </select>
           </div>
           <ol class="choro-legend" id="choro-legend"></ol>
+        </section>
+
+        <section class="panel-block" aria-labelledby="year-title">
+          <h2 id="year-title">Year</h2>
+          <div class="year-input-wrap">
+            <input type="number" id="year-input" class="pk-select" min="2017" max="2050" step="1" value="2023" aria-label="Year" />
+            <p class="muted year-note">Census 2023 and 2017 data. Population projected using growth rates for other years.</p>
+          </div>
         </section>
 
         <section class="panel-block" aria-labelledby="rank-title">
@@ -167,6 +171,18 @@
           </ul>
           <h3>Corrections to the machine-readable tables</h3>
           <ul id="fixes"></ul>
+          <h3>Pakistan's international borders</h3>
+          <p>Pakistan shares approximately 6,774 km of land borders with four countries:</p>
+          <table class="sources-table">
+            <thead><tr><th scope="col">Country</th><th scope="col">Border length (km)</th><th scope="col">Provinces/regions on the Pakistan side</th></tr></thead>
+            <tbody>
+              <tr><td>India</td><td>3,323</td><td>Azad Kashmir, Punjab, Sindh, Rajasthan (through Sir Creek dispute area)</td></tr>
+              <tr><td>Afghanistan</td><td>2,640</td><td>Balochistan, Khyber Pakhtunkhwa (Durand Line)</td></tr>
+              <tr><td>Iran</td><td>909</td><td>Balochistan (Sistan and Baluchestan Province)</td></tr>
+              <tr><td>China</td><td>523</td><td>Gilgit-Baltistan (Xinjiang Uyghur Autonomous Region)</td></tr>
+            </tbody>
+          </table>
+          <p>Total land border: ~6,774 km. Coastline (Arabian Sea + Indian Ocean): ~1,046 km.</p>
           <h3>Verify it yourself</h3>
           <ul class="link-list">
             <li><a href="https://www.pbs.gov.pk/" target="_blank" rel="noopener">Pakistan Bureau of Statistics</a>: census 2023 results and district tables</li>

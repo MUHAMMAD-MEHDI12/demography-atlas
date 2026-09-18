@@ -12,7 +12,6 @@ import { YearPicker } from "./yearpicker";
 import { SearchBox, searchMarkup } from "./search";
 import { Tour, tourMarkup } from "./tour";
 import { initTheme } from "./theme";
-import { captureStage, printStage, downloadBlob } from "./export";
 
 declare global {
   interface Window {
@@ -442,12 +441,6 @@ class App {
       });
     }
     $("recenter").addEventListener("click", () => this.map.recenter(!reducedMotion.matches));
-    $("export-png")?.addEventListener("click", async () => {
-      const blob = await captureStage(2);
-      const name = `demography-atlas-${this.primary.name.toLowerCase().replace(/\s+/g, "-")}.png`;
-      downloadBlob(blob, name);
-    });
-    $("export-pdf")?.addEventListener("click", () => printStage());
     document.addEventListener("keydown", (e) => {
       if (e.target instanceof HTMLInputElement || $<HTMLDialogElement>("picker").open || this.details.isOpen) return;
       if (e.key === " " && !(e.target instanceof HTMLButtonElement)) {

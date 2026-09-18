@@ -1095,28 +1095,6 @@ button {
 .details-btn:hover {
   background: var(--land);
 }
-.export-btns {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
-}
-.export-btn {
-  flex: 1;
-  min-height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--ink);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.export-btn:hover {
-  background: var(--land);
-}
 .link-btn {
   padding: 0;
   border: 0;

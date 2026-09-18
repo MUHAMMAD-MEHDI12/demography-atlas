@@ -98,8 +98,27 @@ export function value(d: District, key: Indicator): number {
   return typeof v === "number" ? v : NaN;
 }
 
+/** Project population to a given year using growth rates. Returns null if no data. */
+export function valueAtYear(d: District, year: number): number | null {
+  if (d.population === null) return null;
+  if (year === 2017 && d.pop2017 !== null) return d.pop2017;
+  if (year === (d.popYear ?? 2023)) return d.population;
+  if (d.growth === null) return d.population;
+  const baseYear = d.popYear ?? 2023;
+  const yearsDiff = year - baseYear;
+  return Math.round(d.population * Math.pow(1 + d.growth / 100, yearsDiff));
+}
+
 /** Districts with a full PBS age table. */
 export const hasAge = (d: District) => d.age !== null;
+
+/** Quantile class breaks from pre-computed values. */
+export function breaksFrom(values: number[], classes = 6): number[] {
+  const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+  const out: number[] = [];
+  for (let i = 1; i < classes; i++) out.push(sorted[Math.floor((i / classes) * (sorted.length - 1))]);
+  return out;
+}
 
 /** Quantile class breaks (6 classes) so every colour holds about the same number of districts. */
 export function breaks(units: District[], key: Indicator, classes = 6): number[] {
