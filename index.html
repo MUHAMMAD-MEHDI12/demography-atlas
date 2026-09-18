@@ -79,6 +79,14 @@
           <small>Age tables, deaths, births and every year from 1950 to 2100</small>
         </button>
 
+        <section class="panel-block" aria-labelledby="heatmap-title">
+          <div class="block-head">
+            <h2 id="heatmap-title">Map view</h2>
+            <button type="button" class="heatmap-btn" id="heatmap-btn" aria-pressed="false" title="Toggle heatmap mode (brightness = population)">Heatmap</button>
+          </div>
+          <p class="muted" id="heatmap-hint" hidden>Population density shown as brightness. The selected country is highlighted.</p>
+        </section>
+
         <section class="panel-block" aria-labelledby="trend-title">
           <h2 id="trend-title">Total population, 1950–2100</h2>
           <div class="chart" id="pop-chart">

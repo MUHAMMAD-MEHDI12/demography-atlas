@@ -1362,6 +1362,27 @@ button {
   background: var(--ink);
   color: var(--panel);
 }
+.heatmap-btn {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.heatmap-btn:hover {
+  background: var(--land);
+}
+.heatmap-btn.is-on {
+  background: var(--highlight);
+  color: var(--ink);
+  border-color: var(--highlight);
+}
 .chart-readout {
   min-height: 2.7em;
   margin: 0 0 6px;

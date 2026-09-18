@@ -65,6 +65,32 @@
   font: inherit;
   font-size: 14px;
 }
+.colour-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.heatmap-btn {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.heatmap-btn:hover {
+  background: var(--land);
+}
+.heatmap-btn.is-on {
+  background: var(--choro-1);
+  color: #fff;
+  border-color: var(--choro-1);
+}
 .choro-legend {
   display: grid;
   gap: 4px;

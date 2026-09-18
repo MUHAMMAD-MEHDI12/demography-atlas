@@ -78,13 +78,16 @@
         <section class="panel-block" aria-labelledby="colour-title">
           <div class="block-head">
             <h2 id="colour-title">Map colours</h2>
-            <select id="indicator" class="pk-select" aria-label="Colour the map by">
-              <option value="population">Population</option>
-              <option value="density">People per km²</option>
-              <option value="growth">Growth per year</option>
-              <option value="urbanPct">Urban population</option>
-              <option value="sexRatio">Males per 100 females</option>
-            </select>
+            <div class="colour-controls">
+              <button type="button" class="heatmap-btn" id="heatmap-btn" aria-pressed="false" title="Toggle heatmap mode (brightness = population)">Heatmap</button>
+              <select id="indicator" class="pk-select" aria-label="Colour the map by">
+                <option value="population">Population</option>
+                <option value="density">People per km²</option>
+                <option value="growth">Growth per year</option>
+                <option value="urbanPct">Urban population</option>
+                <option value="sexRatio">Males per 100 females</option>
+              </select>
+            </div>
           </div>
           <ol class="choro-legend" id="choro-legend"></ol>
         </section>

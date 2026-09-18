@@ -84,6 +84,7 @@ export class WorldMap {
   lastFlightMs = 0;
   private velocity = { x: 0, y: 0 };
   private zoomTarget: { scale: number; x: number; y: number } | null = null;
+  private fillOverride: ((id: number) => string | null) | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -204,6 +205,12 @@ export class WorldMap {
   /** Colours changed (e.g. a new choropleth): redraw. */
   repaint() {
     this.readColors();
+    this.requestFrame();
+  }
+
+  /** Set or clear a dynamic fill override (e.g. for heatmap mode). */
+  setFill(fn: ((id: number) => string | null) | null) {
+    this.fillOverride = fn;
     this.requestFrame();
   }
 
@@ -402,7 +409,7 @@ export class WorldMap {
       ctx.fillStyle = c.rule;
       ctx.fill();
     }
-    const fill = this.layer?.fill;
+    const fill = this.fillOverride ?? this.layer?.fill;
     if (fill) {
       for (const f of this.features) {
         ctx.beginPath();

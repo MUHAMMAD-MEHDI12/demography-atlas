@@ -12,6 +12,7 @@ import { YearPicker } from "./yearpicker";
 import { SearchBox, searchMarkup } from "./search";
 import { Tour, tourMarkup } from "./tour";
 import { initTheme } from "./theme";
+import { heatmapColour } from "./pk/data";
 
 declare global {
   interface Window {
@@ -60,6 +61,8 @@ class App {
   private flightMs: number | undefined; // shorter flights during the tour
   private chartDrag: { dx: number; dy: number; id: number } | null = null;
   private chartMoved = false;
+  private heatmap = false;
+  private heatmapNorm = new Map<number, number>();
 
   constructor(private data: Dataset, world: WorldData, extras: MapExtras) {
     const hash = new URLSearchParams(location.hash.slice(1));
@@ -188,6 +191,7 @@ class App {
     document.title = "HumanScape";
     this.map.select(p.code, this.compare?.code ?? null, (code) => this.members(code), animate && !reducedMotion.matches, stay, this.flightMs);
     this.statsKey = "";
+    if (this.heatmap) this.computeHeatmap();
     this.kick();
   }
 
@@ -242,6 +246,8 @@ class App {
 
     if (moving || this.playing) this.raf = requestAnimationFrame((t) => this.frame(t));
     else this.raf = 0;
+
+    if (this.heatmap && (moving || this.playing)) this.computeHeatmap();
   }
 
   /** Ease shown values towards target; returns true while still moving. */
@@ -401,6 +407,46 @@ class App {
     this.setPlaying(!this.playing);
   }
 
+  private toggleHeatmap() {
+    this.heatmap = !this.heatmap;
+    const btn = $<HTMLButtonElement>("heatmap-btn");
+    btn.classList.toggle("is-on", this.heatmap);
+    btn.setAttribute("aria-pressed", String(this.heatmap));
+    const hint = $("heatmap-hint");
+    if (hint) hint.hidden = !this.heatmap;
+    if (this.heatmap) {
+      this.computeHeatmap();
+    } else {
+      this.map.setFill(null);
+    }
+    this.map.repaint();
+  }
+
+  private computeHeatmap() {
+    const y = Math.round(this.yearShown);
+    const populations = this.data.places
+      .filter((p) => p.area !== "Aggregate")
+      .map((p) => ({ code: p.code, pop: this.data.annualFigures(p.index, y)?.population ?? 0 }))
+      .filter((r) => r.pop > 0);
+    if (!populations.length) return;
+    const pops = populations.map((r) => r.pop);
+    const logMin = Math.log(Math.max(Math.min(...pops), 1));
+    const logMax = Math.log(Math.max(Math.max(...pops), 1));
+    const range = logMax - logMin || 1;
+    this.heatmapNorm = new Map();
+    for (const { code, pop } of populations) {
+      const norm = (Math.log(Math.max(pop, 1)) - logMin) / range;
+      this.heatmapNorm.set(code, Math.max(0, Math.min(1, norm)));
+    }
+    this.map.setFill((id) => {
+      const norm = this.heatmapNorm.get(id) ?? 0;
+      const isPrimary = id === this.primary.code;
+      const isCompare = id === this.compare?.code;
+      if (isPrimary || isCompare) return heatmapColour(norm);
+      return heatmapColour(norm * 0.4);
+    });
+  }
+
   private bindControls() {
     this.yearPicker = new YearPicker(
       $("year-picker"),
@@ -432,6 +478,10 @@ class App {
       });
     }
     $("recenter").addEventListener("click", () => this.map.recenter(!reducedMotion.matches));
+    const heatBtn = $<HTMLButtonElement>("heatmap-btn");
+    if (heatBtn) {
+      heatBtn.addEventListener("click", () => this.toggleHeatmap());
+    }
     document.addEventListener("keydown", (e) => {
       if (e.target instanceof HTMLInputElement || $<HTMLDialogElement>("picker").open || this.details.isOpen) return;
       if (e.key === " " && !(e.target instanceof HTMLButtonElement)) {
