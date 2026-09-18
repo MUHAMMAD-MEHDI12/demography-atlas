@@ -1684,15 +1684,21 @@ a:hover {
   color: var(--ink-2);
 }
 .site-foot p {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
 }
 .social-links {
   display: flex;
   justify-content: center;
-  gap: 16px;
+  gap: 24px;
 }
 .social-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--ink-2);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
   transition: color 0.15s;
 }
 .social-links a:hover {
