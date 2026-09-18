@@ -730,7 +730,7 @@ class PakistanApp {
         const li = document.createElement("li");
         const b = document.createElement("button");
         b.type = "button";
-        const tag = u.kind === "new" ? " <small>new district</small>" : u.kind === "ajk" || u.kind === "gb" || u.kind === "iok" ? " <small>no census table</small>" : "";
+        const tag = u.kind === "new" ? " <small>new district</small>" : u.kind === "iok" ? " <small>disputed</small>" : "";
         b.innerHTML = `<span>${esc(u.name)}${tag}</span><small>${esc(u.division || u.province)}</small>`;
         b.addEventListener("click", () => {
           $<HTMLDialogElement>("picker").close();

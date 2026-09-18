@@ -423,74 +423,8 @@ export class WorldMap {
     ctx.lineWidth = fill ? 0.5 : 0.6;
     ctx.stroke();
 
-    // Focus effect: vignette + glow when a selection is active
-    const sel = this.features.filter((f) => this.selected.has(Number(f.id)));
-    if (sel.length) {
-      // --- Step 1: dim all non-selected countries ---
-      for (const f of this.features) {
-        const id = Number(f.id);
-        if (this.selected.has(id) || this.compared.has(id)) continue;
-        ctx.beginPath();
-        path(f);
-        ctx.fillStyle = c.ocean;
-        ctx.globalAlpha = 0.5;
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-
-      // --- Step 2: radial vignette darkening from the edges ---
-      // compute the bounding-box centre of the selected features on screen
-      let minX = this.w, minY = this.h, maxX = 0, maxY = 0;
-      for (const f of sel) {
-        const b = path.bounds(f);
-        minX = Math.min(minX, b[0][0]);
-        minY = Math.min(minY, b[0][1]);
-        maxX = Math.max(maxX, b[1][0]);
-        maxY = Math.max(maxY, b[1][1]);
-      }
-      const cx = (minX + maxX) / 2;
-      const cy = (minY + maxY) / 2;
-      const spanX = maxX - minX;
-      const spanY = maxY - minY;
-      const featureRadius = Math.max(spanX, spanY) / 2;
-      // outer ring extends well beyond the selection
-      const outerR = Math.max(this.w, this.h) * 0.75;
-      const innerR = featureRadius * 1.8;
-
-      // radial gradient that darkens the edges (source-over, no composite tricks)
-      const vig = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
-      vig.addColorStop(0, "rgba(0,0,0,0)");
-      vig.addColorStop(0.3, "rgba(0,0,0,0)");
-      vig.addColorStop(0.7, "rgba(0,0,0,0.15)");
-      vig.addColorStop(1, "rgba(0,0,0,0.35)");
-      ctx.fillStyle = vig;
-      ctx.fillRect(0, 0, this.w, this.h);
-
-      // --- Step 3: soft glow around the selected features ---
-      ctx.save();
-      ctx.beginPath();
-      for (const f of sel) path(f);
-      ctx.shadowColor = c.highlight;
-      ctx.shadowBlur = 20;
-      ctx.strokeStyle = c.highlight;
-      ctx.globalAlpha = 0.55;
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-      ctx.restore();
-      ctx.globalAlpha = 1;
-
-      // --- Step 4: re-draw the selected fill brighter on top ---
-      ctx.beginPath();
-      for (const f of sel) path(f);
-      ctx.fillStyle = c.highlight;
-      ctx.globalAlpha = 0.3;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = c.ink;
-      ctx.lineWidth = 0.9;
-      ctx.stroke();
-    } else if (focusMode) {
-      // Pakistan districts page: simpler dim without vignette
+    // Focus effect: dim non-selected areas when a selection is active
+    if (focusMode) {
       for (const f of this.features) {
         const id = Number(f.id);
         if (this.selected.has(id) || this.compared.has(id)) continue;
@@ -501,6 +435,19 @@ export class WorldMap {
         ctx.fill();
         ctx.globalAlpha = 1;
       }
+    }
+
+    const sel = this.features.filter((f) => this.selected.has(Number(f.id)));
+    if (sel.length) {
+      ctx.beginPath();
+      for (const f of sel) path(f);
+      ctx.fillStyle = c.highlight;
+      ctx.globalAlpha = 0.5;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = c.ink;
+      ctx.lineWidth = 0.9;
+      ctx.stroke();
     }
 
     const cmp = this.features.filter((f) => this.compared.has(Number(f.id)));
