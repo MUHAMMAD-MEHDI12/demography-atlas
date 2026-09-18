@@ -23,8 +23,8 @@ const mainPolygon = (f) => {
   return best;
 };
 
-/** Convert steradians to square kilometres. */
-const steradiansToKm2 = (sr) => Math.round(sr * 6371.0088 * 6371.0088 * Math.PI);
+/** Convert steradians to square kilometres (1 steradian = R² km², π already included in steradians). */
+const steradiansToKm2 = (sr) => Math.round(sr * 6371.0088 * 6371.0088);
 
 const round = (v) => Math.round(v * 100) / 100;
 const in110 = new Set(t110.objects.countries.geometries.map((g) => g.id).filter(Boolean).map(Number));
@@ -51,8 +51,16 @@ const extra = {
   535: [-68.26, 12.18, 0.3], 312: [-61.55, 16.25, 0.4], 474: [-61.02, 14.64, 0.3], 254: [-53.1, 3.93, 1.6],
   772: [-171.85, -9.2, 0.3], 798: [179.2, -8.52, 0.5],
 };
+// Official areas from national statistics offices (km²).
+const officialAreas = {
+  586: 881_913, // Pakistan (including GB, AJK, FATA)
+};
 for (const [id, [x, y, r]] of Object.entries(extra)) {
   places[id] ??= { c: [x, y], b: [x - r, y - r, x + r, y + r], dot: 1 };
+}
+// Override areas with official figures where available.
+for (const [id, area] of Object.entries(officialAreas)) {
+  if (places[id]) places[id].area = area;
 }
 // Drop names from the drawing topology; the app uses UN names.
 for (const g of t110.objects.countries.geometries) delete g.properties;
