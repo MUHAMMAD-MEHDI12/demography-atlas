@@ -73,19 +73,16 @@
           <div><dt>Births per woman</dt><dd data-k="tfr"></dd></div>
           <div><dt>Life expectancy at birth</dt><dd data-k="e0"></dd></div>
           <div class="wide"><dt>People 65+ for every 100 aged 15–64</dt><dd data-k="oldAge"></dd></div>
+          <div><dt>Total area</dt><dd data-k="area"></dd></div>
         </dl>
         <button type="button" class="details-btn" id="details-btn" aria-haspopup="dialog">
           <span>Detailed statistics</span>
           <small>Age tables, deaths, births and every year from 1950 to 2100</small>
         </button>
-
-        <section class="panel-block" aria-labelledby="heatmap-title">
-          <div class="block-head">
-            <h2 id="heatmap-title">Map view</h2>
-            <button type="button" class="heatmap-btn" id="heatmap-btn" aria-pressed="false" title="Toggle heatmap mode (brightness = population)">Heatmap</button>
-          </div>
-          <p class="muted" id="heatmap-hint" hidden>Population density shown as brightness. The selected country is highlighted.</p>
-        </section>
+        <div class="export-btns">
+          <button type="button" class="export-btn" id="export-png" title="Download as high-resolution PNG">PNG</button>
+          <button type="button" class="export-btn" id="export-pdf" title="Print / save as PDF">PDF</button>
+        </div>
 
         <section class="panel-block" aria-labelledby="trend-title">
           <h2 id="trend-title">Total population, 1950–2100</h2>

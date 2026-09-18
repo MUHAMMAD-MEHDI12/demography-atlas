@@ -6,8 +6,8 @@
   --ink: #16252e;
   --ink-2: #52636b;
   --panel: #fbfcfb;
-  --male: #41639f;
-  --female: #cd4f7e;
+  --male: #2563eb;
+  --female: #e11d72;
   --highlight: #e2a93a;
   --gain: #2d7a5a;
   --loss: #b8472e;
@@ -24,8 +24,8 @@
     --ink: #e3ebee;
     --ink-2: #92a4ac;
     --panel: #111d22;
-    --male: #86a6e8;
-    --female: #f07fa8;
+    --male: #60a5fa;
+    --female: #f472b6;
     --highlight: #d9a843;
     --gain: #5dbb8f;
     --loss: #e5805f;
@@ -1095,6 +1095,28 @@ button {
 .details-btn:hover {
   background: var(--land);
 }
+.export-btns {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.export-btn {
+  flex: 1;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.export-btn:hover {
+  background: var(--land);
+}
 .link-btn {
   padding: 0;
   border: 0;
@@ -1362,27 +1384,6 @@ button {
   background: var(--ink);
   color: var(--panel);
 }
-.heatmap-btn {
-  min-height: 30px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--ink);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
-}
-.heatmap-btn:hover {
-  background: var(--land);
-}
-.heatmap-btn.is-on {
-  background: var(--highlight);
-  color: var(--ink);
-  border-color: var(--highlight);
-}
 .chart-readout {
   min-height: 2.7em;
   margin: 0 0 6px;
@@ -1647,5 +1648,43 @@ a:hover {
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+  .dock,
+  .head,
+  .legend,
+  .timeline,
+  .loading,
+  .tour-btn,
+  .tour-caption,
+  .recenter,
+  .tooltip,
+  .export-btns,
+  .site,
+  dialog {
+    display: none !important;
+  }
+  .app {
+    display: block !important;
+  }
+  .stage {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .stage canvas {
+    width: 100% !important;
+    height: auto !important;
+  }
+  .stage svg {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
   }
 }

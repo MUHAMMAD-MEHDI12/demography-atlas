@@ -12,7 +12,7 @@ import { YearPicker } from "./yearpicker";
 import { SearchBox, searchMarkup } from "./search";
 import { Tour, tourMarkup } from "./tour";
 import { initTheme } from "./theme";
-import { heatmapColour } from "./pk/data";
+import { captureStage, printStage, downloadBlob } from "./export";
 
 declare global {
   interface Window {
@@ -61,10 +61,10 @@ class App {
   private flightMs: number | undefined; // shorter flights during the tour
   private chartDrag: { dx: number; dy: number; id: number } | null = null;
   private chartMoved = false;
-  private heatmap = false;
-  private heatmapNorm = new Map<number, number>();
+  private places: WorldData["places"];
 
   constructor(private data: Dataset, world: WorldData, extras: MapExtras) {
+    this.places = world.places;
     const hash = new URLSearchParams(location.hash.slice(1));
     this.primary = data.byCode(Number(hash.get("place"))) ?? data.byCode(586)!; // Pakistan by default
     this.compare = data.byCode(Number(hash.get("vs"))) ?? null;
@@ -191,7 +191,6 @@ class App {
     document.title = "HumanScape";
     this.map.select(p.code, this.compare?.code ?? null, (code) => this.members(code), animate && !reducedMotion.matches, stay, this.flightMs);
     this.statsKey = "";
-    if (this.heatmap) this.computeHeatmap();
     this.kick();
   }
 
@@ -246,8 +245,6 @@ class App {
 
     if (moving || this.playing) this.raf = requestAnimationFrame((t) => this.frame(t));
     else this.raf = 0;
-
-    if (this.heatmap && (moving || this.playing)) this.computeHeatmap();
   }
 
   /** Ease shown values towards target; returns true while still moving. */
@@ -291,15 +288,22 @@ class App {
   private updateStats(y: number) {
     const a = this.data.profile(this.primary.index, y);
     const b = this.compare ? this.data.profile(this.compare.index, y) : null;
+    const getArea = (code: number) => {
+      const place = this.places?.[String(code)];
+      return place?.area ?? NaN;
+    };
+    const fmtArea = (km2: number) => Number.isFinite(km2) ? `${Math.round(km2).toLocaleString("en")} km²` : "not available";
     const rows: Record<string, (p: Profile) => string> = {
       population: (p) => formatPopulation(p.population),
       medianAge: (p) => `${fmt(p.medianAge, 1)} years`,
       tfr: (p) => fmt(p.tfr, 2),
       e0: (p) => `${fmt(p.e0, 1)} years`,
       oldAge: (p) => fmt(oldAgeDependency(p), 0),
+      area: () => fmtArea(getArea(this.primary.code)),
     };
     for (const dd of document.querySelectorAll<HTMLElement>("#stats dd")) {
       const f = rows[dd.dataset.k!];
+      if (!f) continue;
       dd.replaceChildren();
       const main = document.createElement("span");
       main.className = "v";
@@ -308,7 +312,7 @@ class App {
       if (b && this.compare) {
         const c = document.createElement("span");
         c.className = "c";
-        c.textContent = `${this.compare.name}: ${f(b)}`;
+        c.textContent = `${this.compare.name}: ${dd.dataset.k === "area" ? fmtArea(getArea(this.compare.code)) : f(b)}`;
         dd.append(c);
       }
     }
@@ -407,46 +411,6 @@ class App {
     this.setPlaying(!this.playing);
   }
 
-  private toggleHeatmap() {
-    this.heatmap = !this.heatmap;
-    const btn = $<HTMLButtonElement>("heatmap-btn");
-    btn.classList.toggle("is-on", this.heatmap);
-    btn.setAttribute("aria-pressed", String(this.heatmap));
-    const hint = $("heatmap-hint");
-    if (hint) hint.hidden = !this.heatmap;
-    if (this.heatmap) {
-      this.computeHeatmap();
-    } else {
-      this.map.setFill(null);
-    }
-    this.map.repaint();
-  }
-
-  private computeHeatmap() {
-    const y = Math.round(this.yearShown);
-    const populations = this.data.places
-      .filter((p) => p.area !== "Aggregate")
-      .map((p) => ({ code: p.code, pop: this.data.annualFigures(p.index, y)?.population ?? 0 }))
-      .filter((r) => r.pop > 0);
-    if (!populations.length) return;
-    const pops = populations.map((r) => r.pop);
-    const logMin = Math.log(Math.max(Math.min(...pops), 1));
-    const logMax = Math.log(Math.max(Math.max(...pops), 1));
-    const range = logMax - logMin || 1;
-    this.heatmapNorm = new Map();
-    for (const { code, pop } of populations) {
-      const norm = (Math.log(Math.max(pop, 1)) - logMin) / range;
-      this.heatmapNorm.set(code, Math.max(0, Math.min(1, norm)));
-    }
-    this.map.setFill((id) => {
-      const norm = this.heatmapNorm.get(id) ?? 0;
-      const isPrimary = id === this.primary.code;
-      const isCompare = id === this.compare?.code;
-      if (isPrimary || isCompare) return heatmapColour(norm);
-      return heatmapColour(norm * 0.4);
-    });
-  }
-
   private bindControls() {
     this.yearPicker = new YearPicker(
       $("year-picker"),
@@ -478,10 +442,12 @@ class App {
       });
     }
     $("recenter").addEventListener("click", () => this.map.recenter(!reducedMotion.matches));
-    const heatBtn = $<HTMLButtonElement>("heatmap-btn");
-    if (heatBtn) {
-      heatBtn.addEventListener("click", () => this.toggleHeatmap());
-    }
+    $("export-png")?.addEventListener("click", async () => {
+      const blob = await captureStage(2);
+      const name = `demography-atlas-${this.primary.name.toLowerCase().replace(/\s+/g, "-")}.png`;
+      downloadBlob(blob, name);
+    });
+    $("export-pdf")?.addEventListener("click", () => printStage());
     document.addEventListener("keydown", (e) => {
       if (e.target instanceof HTMLInputElement || $<HTMLDialogElement>("picker").open || this.details.isOpen) return;
       if (e.key === " " && !(e.target instanceof HTMLButtonElement)) {

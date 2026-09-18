@@ -8,7 +8,8 @@ import { SITE } from "../site";
 import { SearchBox, searchMarkup } from "../search";
 import { Tour, tourMarkup } from "../tour";
 import { initTheme } from "../theme";
-import { loadPakistan, shapes, breaks, classOf, ramp, value, INDICATORS, heatmapColour, heatmapNormalise, type District, type Indicator, type PakistanData } from "./data";
+import { loadPakistan, shapes, breaks, classOf, ramp, value, INDICATORS, type District, type Indicator, type PakistanData } from "./data";
+import { captureStage, printStage, downloadBlob } from "../export";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
@@ -64,8 +65,6 @@ class PakistanApp {
   private indicator: Indicator = "population";
   private colours: string[] = [];
   private cuts: number[] = [];
-  private heatmap = false;
-  private heatmapNorm = new Map<number, number>();
   private glyph: Glyph;
   private map: WorldMap;
   private motion = new ChartMotion(() => reducedMotion.matches);
@@ -126,13 +125,6 @@ class PakistanApp {
         fill: (id) => {
           const u = this.byId.get(id);
           if (!u) return null;
-          if (this.heatmap) {
-            const norm = this.heatmapNorm.get(id) ?? 0;
-            const isPrimary = id === this.primary.id;
-            const isCompare = id === this.compare?.id;
-            if (isPrimary || isCompare) return heatmapColour(norm);
-            return heatmapColour(norm * 0.4);
-          }
           const v = value(u, this.indicator);
           return Number.isFinite(v) ? this.colours[classOf(v, this.cuts)] : null;
         },
@@ -297,37 +289,15 @@ class PakistanApp {
     const cs = getComputedStyle(document.documentElement);
     this.colours = ramp(cs.getPropertyValue("--choro-0").trim() || "#eef3f0", cs.getPropertyValue("--choro-1").trim() || "#1d5b73");
     this.cuts = breaks(this.units, this.indicator);
-    if (this.heatmap) this.heatmapNorm = heatmapNormalise(this.units, this.indicator);
   }
 
   private renderLegend() {
-    const el = $("choro-legend");
-    if (this.heatmap) {
-      const info = INDICATORS[this.indicator];
-      const f = (v: number) => (this.indicator === "population" ? compact(v) : fmt(v, info.digits === 0 ? 0 : Math.min(info.digits, 1)));
-      const vals = this.units.map((u) => value(u, this.indicator)).filter(Number.isFinite);
-      const lo = Math.min(...vals), hi = Math.max(...vals);
-      const steps = [0, 0.25, 0.5, 0.75, 1.0];
-      const labels = steps.map((t) => {
-        const useLog = this.indicator === "population" || this.indicator === "density";
-        const rawMin = lo, rawMax = hi;
-        const logMin = useLog ? Math.log(Math.max(rawMin, 1)) : rawMin;
-        const logMax = useLog ? Math.log(Math.max(rawMax, 1)) : rawMax;
-        const range = logMax - logMin || 1;
-        const v = useLog ? Math.exp(logMin + t * range) : rawMin + t * range;
-        return f(v);
-      });
-      el.innerHTML = steps.map((t, i) =>
-        `<li><i style="background:${heatmapColour(t)}"></i><span>${labels[i]}${i < steps.length - 1 ? "–" + labels[i + 1] : "+"}</span></li>`
-      ).join("");
-      return;
-    }
     const info = INDICATORS[this.indicator];
     const f = (v: number) => (this.indicator === "population" ? compact(v) : fmt(v, info.digits === 0 ? 0 : Math.min(info.digits, 1)));
     const vals = this.units.map((u) => value(u, this.indicator)).filter(Number.isFinite);
     const lo = Math.min(...vals), hi = Math.max(...vals);
     const edges = [lo, ...this.cuts, hi];
-    el.innerHTML = this.colours
+    $("choro-legend").innerHTML = this.colours
       .map((col, i) => `<li><i style="background:${col}"></i><span>${f(edges[i])}–${f(edges[i + 1])}${info.unit === "%" ? "%" : ""}</span></li>`)
       .join("");
   }
@@ -478,17 +448,6 @@ class PakistanApp {
       this.renderRanking();
       this.map.repaint();
     });
-    const heatBtn = $<HTMLButtonElement>("heatmap-btn");
-    if (heatBtn) {
-      heatBtn.addEventListener("click", () => {
-        this.heatmap = !this.heatmap;
-        heatBtn.classList.toggle("is-on", this.heatmap);
-        heatBtn.setAttribute("aria-pressed", String(this.heatmap));
-        this.recolour();
-        this.renderLegend();
-        this.map.repaint();
-      });
-    }
     this.renderLegend();
     $("rank-list").addEventListener("click", (e) => {
       this.tour.stop();
@@ -525,6 +484,12 @@ class PakistanApp {
       });
     }
     $("details-csv").addEventListener("click", () => this.download());
+    $("export-png")?.addEventListener("click", async () => {
+      const blob = await captureStage(2);
+      const name = `humanscape-${slug(this.primary.name)}.png`;
+      downloadBlob(blob, name);
+    });
+    $("export-pdf")?.addEventListener("click", () => printStage());
   }
 
   private bindStage() {

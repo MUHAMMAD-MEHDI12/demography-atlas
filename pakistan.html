@@ -74,20 +74,21 @@
           <span>Detailed statistics</span>
           <small>Age tables for this district and a sortable table of every district</small>
         </button>
+        <div class="export-btns">
+          <button type="button" class="export-btn" id="export-png" title="Download as high-resolution PNG">PNG</button>
+          <button type="button" class="export-btn" id="export-pdf" title="Print / save as PDF">PDF</button>
+        </div>
 
         <section class="panel-block" aria-labelledby="colour-title">
           <div class="block-head">
             <h2 id="colour-title">Map colours</h2>
-            <div class="colour-controls">
-              <button type="button" class="heatmap-btn" id="heatmap-btn" aria-pressed="false" title="Toggle heatmap mode (brightness = population)">Heatmap</button>
-              <select id="indicator" class="pk-select" aria-label="Colour the map by">
-                <option value="population">Population</option>
-                <option value="density">People per km²</option>
-                <option value="growth">Growth per year</option>
-                <option value="urbanPct">Urban population</option>
-                <option value="sexRatio">Males per 100 females</option>
-              </select>
-            </div>
+            <select id="indicator" class="pk-select" aria-label="Colour the map by">
+              <option value="population">Population</option>
+              <option value="density">People per km²</option>
+              <option value="growth">Growth per year</option>
+              <option value="urbanPct">Urban population</option>
+              <option value="sexRatio">Males per 100 females</option>
+            </select>
           </div>
           <ol class="choro-legend" id="choro-legend"></ol>
         </section>

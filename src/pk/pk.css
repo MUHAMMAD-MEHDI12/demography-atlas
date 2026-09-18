@@ -1,17 +1,17 @@
 /* Pakistan districts page */
 :root {
-  --choro-0: #f3f4ef;
-  --choro-1: #6f9aa8;
+  --choro-0: #e8f0e4;
+  --choro-1: #0c3a5c;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --choro-0: #1b282e;
-    --choro-1: #4d8594;
+    --choro-0: #1e2d34;
+    --choro-1: #3a9fc2;
   }
 }
 :root[data-theme="dark"] {
-  --choro-0: #1b282e;
-  --choro-1: #4d8594;
+  --choro-0: #1e2d34;
+  --choro-1: #3a9fc2;
 }
 
 .census-badge {
@@ -64,32 +64,6 @@
   color: var(--ink);
   font: inherit;
   font-size: 14px;
-}
-.colour-controls {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-.heatmap-btn {
-  min-height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--ink);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
-}
-.heatmap-btn:hover {
-  background: var(--land);
-}
-.heatmap-btn.is-on {
-  background: var(--choro-1);
-  color: #fff;
-  border-color: var(--choro-1);
 }
 .choro-legend {
   display: grid;

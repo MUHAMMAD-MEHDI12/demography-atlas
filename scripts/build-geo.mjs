@@ -1,6 +1,6 @@
 // Builds public/data/world.json from Natural Earth (via the world-atlas package):
-// a 1:110m country topology for drawing, plus a centroid and bounding box for
-// every country in the more detailed 1:50m set, so small states (Singapore,
+// a 1:110m country topology for drawing, plus a centroid, bounding box and area
+// for every country in the more detailed 1:50m set, so small states (Singapore,
 // Maldives, Pacific islands) can still be located and tapped as dots.
 import { readFileSync, writeFileSync } from "node:fs";
 import { feature } from "topojson-client";
@@ -23,6 +23,9 @@ const mainPolygon = (f) => {
   return best;
 };
 
+/** Convert steradians to square kilometres. */
+const steradiansToKm2 = (sr) => Math.round(sr * 6371.0088 * 6371.0088 * Math.PI);
+
 const round = (v) => Math.round(v * 100) / 100;
 const in110 = new Set(t110.objects.countries.geometries.map((g) => g.id).filter(Boolean).map(Number));
 const places = {};
@@ -39,6 +42,7 @@ for (const f of feature(t50, t50.objects.countries).features) {
     c: geoCentroid(main).map(round),
     b: [round(w), round(s), round(e), round(n)],
     dot: in110.has(Number(f.id)) ? 0 : 1,
+    area: steradiansToKm2(geoArea(f)),
   };
 }
 // UN areas that Natural Earth folds into a parent country or omits.
