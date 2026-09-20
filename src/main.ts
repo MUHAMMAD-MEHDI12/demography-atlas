@@ -22,7 +22,7 @@ declare global {
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const PLAY_SPEED = 4; // years per second
-const CURRENT_YEAR = new Date().getFullYear();
+const CURRENT_YEAR = 2023; // last UN WPP 2024 estimate year (2024+ are projections)
 
 /** GDP per capita (USD, 2025, World Bank API: NY.GDP.PCAP.CD). Key = ISO 3166-1 numeric code. */
 const GDP_PER_CAPITA: Record<number, number> = {
