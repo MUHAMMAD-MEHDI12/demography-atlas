@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HumanScape - A Complete Demography Atlas</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,700;1,500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+@page{size:A4;margin:0}
+body{font-family:'Inter',-apple-system,sans-serif;font-size:14px;line-height:1.7;color:#1a1a2e;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.cover{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;background:linear-gradient(135deg,#0d181d 0%,#1a282e 40%,#2d4a53 100%);color:#fff;padding:60px 80px;page-break-after:always;position:relative;overflow:hidden}
+.cover::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 70%,rgba(226,169,58,.15) 0%,transparent 50%),radial-gradient(circle at 70% 30%,rgba(37,99,235,.1) 0%,transparent 50%)}
+.cover-logo{width:80px;height:80px;border:2px solid rgba(255,255,255,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:40px;position:relative;z-index:1}
+.cover-logo svg{width:40px;height:40px}
+.cover h1{font-family:'Playfair Display',Georgia,serif;font-size:52px;font-weight:700;letter-spacing:-1px;margin-bottom:16px;position:relative;z-index:1;line-height:1.1}
+.cover h1 span{color:#e2a93a}
+.cover .subtitle{font-size:20px;font-weight:300;color:rgba(255,255,255,.7);max-width:600px;margin-bottom:60px;position:relative;z-index:1;line-height:1.5}
+.cover-meta{position:relative;z-index:1;font-size:13px;color:rgba(255,255,255,.5);border-top:1px solid rgba(255,255,255,.15);padding-top:24px;width:100%;max-width:500px}
+.cover-meta strong{color:rgba(255,255,255,.8)}
+.content{max-width:720px;margin:0 auto;padding:80px 40px}
+h2{font-family:'Playfair Display',Georgia,serif;font-size:30px;font-weight:700;color:#0d181d;margin:48px 0 20px;line-height:1.2;letter-spacing:-.5px}
+h2:first-child{margin-top:0}
+h3{font-size:18px;font-weight:600;color:#1a282e;margin:32px 0 12px}
+p{margin-bottom:16px;color:#333}
+.lead{font-size:18px;font-weight:400;color:#555;line-height:1.8;border-left:3px solid #e2a93a;padding-left:20px;margin:32px 0}
+.highlight-box{background:linear-gradient(135deg,#f8f9fa,#eef1f3);border-radius:12px;padding:28px 32px;margin:28px 0;border:1px solid #e0e5e9}
+.highlight-box h4{font-size:15px;font-weight:600;color:#0d181d;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:28px 0}
+.stat-card{background:#fff;border:1px solid #e0e5e9;border-radius:10px;padding:20px;text-align:center}
+.stat-card .number{font-size:28px;font-weight:700;color:#2563eb;display:block;line-height:1;margin-bottom:6px}
+.stat-card .label{font-size:12px;font-weight:500;color:#666;text-transform:uppercase;letter-spacing:.5px}
+ul{margin:16px 0 16px 24px;color:#444}
+li{margin-bottom:8px;line-height:1.6}
+li strong{color:#1a1a2e}
+.feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:24px 0}
+.feature-item{background:#fff;border:1px solid #e0e5e9;border-radius:8px;padding:16px 20px}
+.feature-item .icon{font-size:24px;margin-bottom:8px;display:block}
+.feature-item h5{font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:4px}
+.feature-item p{font-size:13px;color:#666;margin:0;line-height:1.5}
+.section-divider{text-align:center;margin:48px 0;color:#ccc;font-size:24px;letter-spacing:12px}
+.quote{font-family:'Playfair Display',Georgia,serif;font-style:italic;font-size:20px;color:#555;text-align:center;margin:40px 48px;padding:24px 0;border-top:1px solid #e0e5e9;border-bottom:1px solid #e0e5e9;line-height:1.6}
+.cta-box{background:linear-gradient(135deg,#0d181d,#1a282e);color:#fff;border-radius:12px;padding:40px;text-align:center;margin:40px 0}
+.cta-box h3{color:#fff;font-family:'Playfair Display',Georgia,serif;font-size:24px;margin-bottom:12px}
+.cta-box p{color:rgba(255,255,255,.7);margin-bottom:20px}
+.cta-box .url{display:inline-block;background:#e2a93a;color:#0d181d;padding:12px 32px;border-radius:8px;font-weight:600;font-size:15px;text-decoration:none}
+.table-wrap{overflow-x:auto;margin:20px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f1f3f5;font-weight:600;text-align:left;padding:10px 14px;border-bottom:2px solid #dee2e6;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#555}
+td{padding:10px 14px;border-bottom:1px solid #eee;color:#444}
+.author-box{display:flex;align-items:center;gap:16px;background:#f8f9fa;border-radius:10px;padding:20px 24px;margin:40px 0}
+.author-avatar{width:56px;height:56px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:20px;flex-shrink:0}
+.author-info h4{font-size:15px;font-weight:600;color:#1a1a2e;margin-bottom:2px}
+.author-info p{font-size:13px;color:#666;margin:0}
+.page-break{page-break-before:always}
+.footer-section{margin-top:60px;padding-top:24px;border-top:1px solid #e0e5e9;font-size:13px;color:#888;text-align:center}
+@media print{.cover{min-height:100vh;page-break-after:always}.content{padding:40px 60px}.page-break{page-break-before:always}}
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="cover-logo">
+    <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="20" cy="20" r="18" opacity="0.3"/><path d="M20 6 L32 30 L8 30 Z" opacity="0.6"/><circle cx="20" cy="22" r="3" fill="currentColor" stroke="none"/></svg>
+  </div>
+  <h1>Human<span>Scape</span></h1>
+  <p class="subtitle">An open-source demography atlas that makes the world's population data visible, interactive, and accessible to everyone</p>
+  <div class="cover-meta"><strong>GeoScape Analytics Lab</strong><br>Published September 2026 &middot; Open Source &middot; CC BY 3.0 IGO</div>
+</div>
+<div class="content">
+<h2>Why We Built HumanScape</h2>
+<p class="lead">Every day, millions of people search for population data. Students writing theses, researchers analyzing trends, journalists verifying facts, policymakers building strategies. Yet the data they need is scattered across dozens of websites, buried in Excel files, or locked behind technical interfaces. HumanScape changes that.</p>
+<p>HumanScape is a free, open-source web application that brings together the world's most authoritative population datasets into a single, visually stunning interface. It shows how every country's age structure, deaths, and births change from <strong>1950 to 2100</strong> using data from the <strong>United Nations World Population Prospects 2024</strong> -- the gold standard of global demographic data.</p>
+<p>Built by <strong>GeoScape Analytics Lab</strong>, HumanScape is designed for anyone who works with population data: demographers, geographers, public health researchers, economists, urban planners, data scientists, and students at every level.</p>
+<div class="stat-grid">
+  <div class="stat-card"><span class="number">237</span><span class="label">Countries &amp; Areas</span></div>
+  <div class="stat-card"><span class="number">150</span><span class="label">Years of Data</span></div>
+  <div class="stat-card"><span class="number">100+</span><span class="label">Data Source Links</span></div>
+</div>
+<div class="section-divider">&bull; &bull; &bull;</div>
+<h2>What Makes It Different</h2>
+<p>Most population tools show you a single number. HumanScape goes deeper. For every country and every year, you see three interconnected views:</p>
+<div class="feature-grid">
+  <div class="feature-item"><span class="icon">&#128202;</span><h5>Population by Age &amp; Sex</h5><p>Interactive population pyramids showing how people are distributed across ages, split by male and female</p></div>
+  <div class="feature-item"><span class="icon">&#128128;</span><h5>Deaths by Age</h5><p>At which ages people die -- the mortality profile that shapes life expectancy</p></div>
+  <div class="feature-item"><span class="icon">&#128118;</span><h5>Births by Mother's Age</h5><p>How old mothers are when children are born -- the fertility pattern that drives future population</p></div>
+  <div class="feature-item"><span class="icon">&#128506;</span><h5>Interactive World Map</h5><p>Grab a triangle, drop it on any country. Drag the map. Click to explore.</p></div>
+</div>
+<h2>The Data Sources Directory</h2>
+<p>One of HumanScape's most valuable features isn't a chart or a map -- it's the <strong>comprehensive directory of 100+ population and demography data sources</strong> built directly into the site. Instead of spending hours Googling for the right dataset, users can find everything in one organized page:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Category</th><th>Key Sources</th><th>What You Find</th></tr></thead>
+<tbody>
+<tr><td><strong>Population</strong></td><td>UN Data Portal, WPP 2024, World Bank, PRB, US Census Bureau</td><td>Population estimates, projections, growth rates</td></tr>
+<tr><td><strong>Fertility &amp; Mortality</strong></td><td>UN WPP, WHO GHO, UN IGME, Our World in Data</td><td>Life expectancy, TFR, infant mortality</td></tr>
+<tr><td><strong>Migration</strong></td><td>UN Migrant Stock, UNHCR, World Bank, OECD, MPI</td><td>Displacement, remittances, migration flows</td></tr>
+<tr><td><strong>Urbanization</strong></td><td>UN WUP, UN-Habitat, City Population</td><td>Urban population, city-level data</td></tr>
+<tr><td><strong>Health</strong></td><td>WHO GHO, World Bank, IHME GBD</td><td>Disease burden, health expenditure</td></tr>
+<tr><td><strong>Economy</strong></td><td>World Bank, UNDP HDI, IMF</td><td>GDP per capita, poverty, HDI</td></tr>
+<tr><td><strong>Education</strong></td><td>World Bank, UNESCO UIS, OECD PISA</td><td>Enrollment, literacy, expenditure</td></tr>
+<tr><td><strong>National Statistics</strong></td><td>PBS, US Census, UK ONS, China NBS, IBGE, ABS, Stats Japan</td><td>Official census data from 12+ countries</td></tr>
+<tr><td><strong>Research</strong></td><td>Max Planck, INED, PAA, IUSSP</td><td>Academic datasets, life tables</td></tr>
+<tr><td><strong>Interactive Tools</strong></td><td>Gapminder, Our World in Data, Worldometers</td><td>Visualizations, live counters</td></tr>
+</tbody></table></div>
+<p>This directory eliminates the biggest pain point in demographic research: <strong>finding the right data source</strong>. Whether you need Pakistan's Census 2023 tables, Nigeria's life expectancy trends, or global CO2 emissions -- it's all linked and categorized.</p>
+</div>
+<div class="page-break"></div>
+<div class="content">
+<h2>Technical Architecture</h2>
+<p>HumanScape is built with modern web technologies optimized for performance and accuracy:</p>
+<ul>
+<li><strong>Data Pipeline:</strong> A Python pipeline fetches UN WPP 2024 data, processes it into a compact binary format, and generates GeoJSON topology with country boundaries from Natural Earth</li>
+<li><strong>Frontend:</strong> TypeScript + Vite for blazing-fast builds; Canvas API for high-performance map rendering</li>
+<li><strong>Visualization:</strong> Custom SVG glyph system showing age pyramids, mortality curves, and fertility patterns -- all computed client-side from raw data</li>
+<li><strong>Pakistan Section:</strong> Dedicated census-level data for all 145+ districts, sourced from PBS Census 2023 and AJK Bureau of Statistics</li>
+<li><strong>GDP Data:</strong> World Bank API integration pulling 2025 GDP per capita for 178 countries</li>
+<li><strong>Country Areas:</strong> 100+ official area overrides from national statistics offices</li>
+<li><strong>Accessibility:</strong> Semantic HTML, ARIA labels, keyboard navigation, reduced-motion support, high-contrast dark mode</li>
+</ul>
+<div class="highlight-box">
+<h4>Data Verification</h4>
+<p>Every number on HumanScape can be traced back to its source. The build pipeline runs automated checks: population totals match UN published figures exactly (World: 8,091,735,000; India: 1,438,070,000; China: 1,422,585,000; Pakistan: 247,504,000). Deaths by age match official UN totals within a median of 0.2%.</p>
+</div>
+<h2>Pakistan: A Deep Dive</h2>
+<p>The Pakistan section is one of HumanScape's most detailed components:</p>
+<ul>
+<li><strong>Complete Census 2023 data</strong> for all 145+ districts from the Pakistan Bureau of Statistics</li>
+<li><strong>AJ&amp;K Census 2023</strong> -- All 10 districts with population, sex, area, density, and growth rates</li>
+<li><strong>Gilgit-Baltistan data</strong> with population projections using growth rates from the 2017 census</li>
+<li><strong>District boundaries</strong> verified against OCHA administrative boundary files</li>
+<li><strong>Historical data from 1950</strong> with projections through 2100</li>
+<li><strong>Pakistan's international borders</strong> -- India (3,323 km), Afghanistan (2,640 km), Iran (909 km), China (523 km)</li>
+</ul>
+<h2>For Researchers &amp; Data Scientists</h2>
+<ul>
+<li><strong>CSV Download:</strong> Export any country's data for analysis in R, Python, Excel, or any statistical software</li>
+<li><strong>Compare Mode:</strong> Overlay two countries on the same chart to see demographic differences side by side</li>
+<li><strong>150-year timeline:</strong> Slide from 1950 to 2100 to watch demographic transitions unfold</li>
+<li><strong>Consistent methodology:</strong> The UN applies the same methods everywhere, making cross-country comparisons fair</li>
+<li><strong>Open source:</strong> All code is on GitHub -- fork it, modify it, build on it</li>
+</ul>
+<h2>Who Is This For?</h2>
+<div class="feature-grid">
+  <div class="feature-item"><h5>Demographers</h5><p>Access age-structured data, fertility schedules, and mortality profiles without navigating UN Data Portal interfaces</p></div>
+  <div class="feature-item"><h5>Students &amp; Educators</h5><p>Teach population concepts with interactive visualizations that make abstract numbers tangible</p></div>
+  <div class="feature-item"><h5>Journalists</h5><p>Quickly verify population claims, find authoritative sources, and download data for stories</p></div>
+  <div class="feature-item"><h5>Policy Analysts</h5><p>Compare demographic indicators across countries and see projections for evidence-based policy</p></div>
+  <div class="feature-item"><h5>Data Scientists</h5><p>Use CSV exports as input for machine learning, economic modeling, or geographic analysis</p></div>
+  <div class="feature-item"><h5>Urban Planners</h5><p>Understand population density, urbanization trends, and migration patterns</p></div>
+</div>
+<div class="quote">"Demography is the study of human populations -- their size, composition, and distribution across places -- and the process through which populations change." -- The Population Reference Bureau</div>
+<h2>The Vision</h2>
+<p>HumanScape started as a project to visualize Pakistan's census data. It has grown into something bigger: a complete, open, free portal to the world's population knowledge. Our vision is to make demographic data as accessible as a weather forecast -- something anyone can check, understand, and use to make better decisions.</p>
+<p>We believe that when people can <em>see</em> how populations change -- the aging of Japan, the youth bulge of Sub-Saharan Africa, the urbanization of China -- they gain a deeper understanding of the forces shaping our world.</p>
+<div class="cta-box">
+<h3>Explore HumanScape</h3>
+<p>Free. Open source. No login required. Data for 237 countries from 1950 to 2100.</p>
+<span class="url">muhammad-mehdi12.github.io/demography-atlas</span>
+</div>
+<div class="author-box">
+  <div class="author-avatar">GA</div>
+  <div class="author-info">
+    <h4>GeoScape Analytics Lab</h4>
+    <p>Built by Muhammad Mehdi and the GeoScape Analytics Lab team. Data from the United Nations World Population Prospects 2024 and the World Bank. Licensed under CC BY 3.0 IGO.</p>
+  </div>
+</div>
+<div class="footer-section">
+<p><strong>Links:</strong> GitHub: github.com/MUHAMMAD-MEHDI12/demography-atlas &middot; LinkedIn: GeoScape Analytics Lab &middot; Data: population.un.org/wpp</p>
+<p style="margin-top:12px">&copy; 2026 GeoScape Analytics Lab. Data CC BY 3.0 IGO (United Nations). Code MIT License.</p>
+</div>
+</div>
+</body>
+</html>

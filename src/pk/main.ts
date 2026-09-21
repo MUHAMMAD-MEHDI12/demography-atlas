@@ -169,7 +169,7 @@ class PakistanApp {
             detail: `${compact(u.population ?? NaN, true)} people, ${u.province}`,
             go: () => {
               this.compare = null;
-              this.flightMs = 1500;
+              this.flightMs = 2200; // a slower, smoother flight during the tour
               this.setPrimary(u, "fly");
               this.flightMs = undefined;
               return this.map.lastFlightMs;

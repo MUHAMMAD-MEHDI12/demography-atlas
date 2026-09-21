@@ -166,7 +166,7 @@ class App {
             go: () => {
               this.setPlaying(false);
               this.compare = null;
-              this.flightMs = 1500;
+              this.flightMs = 2200; // a slower, smoother flight during the tour
               this.setPrimary(p);
               this.flightMs = undefined;
               return this.map.lastFlightMs;

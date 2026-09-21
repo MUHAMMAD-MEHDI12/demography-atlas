@@ -1,0 +1,270 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{tikz}
+
+\definecolor{navy}{HTML}{0D181D}
+\definecolor{gold}{HTML}{E2A93A}
+\definecolor{myblue}{HTML}{2563EB}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{gray}{HumanScape -- GeoScape Analytics Lab}}
+\fancyhead[R]{\small\textcolor{gray}{September 2026}}
+\fancyfoot[C]{\small\textcolor{gray}{\thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\section}{\Large\bfseries\color{navy}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{navy}}{}{0em}{}
+
+\begin{document}
+
+% --- COVER PAGE ---
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture,overlay]
+  \fill[navy] (current page.north west) rectangle (current page.south east);
+  \fill[gold,opacity=0.08] (current page.center) circle (6cm);
+  \fill[myblue,opacity=0.05] ([yshift=-2cm]current page.center) circle (4cm);
+\end{tikzpicture}
+
+\vspace*{3cm}
+\begin{center}
+\textcolor{white}{%
+\begin{tikzpicture}
+\draw[white,thick] (0,0) circle (1.5cm);
+\draw[white,thick] (-0.9,1.3) -- (0.9,1.3) -- (0,-0.8) -- cycle;
+\fill[white] (0,0) circle (0.2cm);
+\end{tikzpicture}
+
+\vspace{1cm}
+
+{\Huge\bfseries Human\textcolor{gold}{Scape}}
+
+\vspace{0.5cm}
+
+{\large An open-source demography atlas that makes the world's population data
+visible, interactive, and accessible to everyone}
+
+\vspace{3cm}
+
+{\small\textcolor{gray!70}{GeoScape Analytics Lab}\\[0.3cm]
+{\small\textcolor{gray!50}{Published September 2026 $\vert$ Open Source $\vert$ CC BY 3.0 IGO}}}
+}
+\end{center}
+\newpage
+
+% --- CONTENT ---
+\section{Why We Built HumanScape}
+
+\textit{Every day, millions of people search for population data. Students writing
+theses, researchers analyzing trends, journalists verifying facts, policymakers
+building strategies. Yet the data they need is scattered across dozens of websites,
+buried in Excel files, or locked behind technical interfaces. HumanScape changes that.}
+
+\vspace{0.3cm}
+
+HumanScape is a free, open-source web application that brings together the world's
+most authoritative population datasets into a single, visually stunning interface.
+It shows how every country's age structure, deaths, and births change from
+\textbf{1950 to 2100} using data from the \textbf{United Nations World Population
+Prospects 2024} -- the gold standard of global demographic data.
+
+Built by \textbf{GeoScape Analytics Lab}, HumanScape is designed for anyone who
+works with population data: demographers, geographers, public health researchers,
+economists, urban planners, data scientists, and students at every level.
+
+\begin{center}
+\begin{tabular}{ccc}
+\toprule
+\textbf{237} & \textbf{150} & \textbf{100+} \\
+Countries \& Areas & Years of Data & Data Source Links \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{What Makes It Different}
+
+Most population tools show you a single number. HumanScape goes deeper. For every
+country and every year, you see three interconnected views:
+
+\begin{itemize}[leftmargin=2cm]
+\item \textbf{Population by Age \& Sex} -- Interactive population pyramids showing
+how people are distributed across ages, split by male and female
+\item \textbf{Deaths by Age} -- At which ages people die: the mortality profile that
+shapes life expectancy
+\item \textbf{Births by Mother's Age} -- How old mothers are when children are born:
+the fertility pattern that drives future population
+\item \textbf{Interactive World Map} -- Grab a triangle, drop it on any country.
+Drag the map. Click to explore.
+\end{itemize}
+
+\section{The Data Sources Directory}
+
+One of HumanScape's most valuable features isn't a chart or a map -- it's the
+\textbf{comprehensive directory of 100+ population and demography data sources}
+built directly into the site. Instead of spending hours searching for the right
+dataset, users can find everything in one organized page:
+
+\vspace{0.3cm}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Category} & \textbf{Key Sources} & \textbf{What You Find} \\
+\midrule
+Population & UN Data Portal, WPP 2024, World Bank, PRB, US Census & Estimates, projections, growth rates \\
+Fertility \& Mortality & UN WPP, WHO GHO, UN IGME, OWID & Life expectancy, TFR, infant mortality \\
+Migration & UN Migrant Stock, UNHCR, World Bank, OECD & Displacement, remittances, flows \\
+Urbanization & UN WUP, UN-Habitat, City Population & Urban population, city data \\
+Health & WHO GHO, World Bank, IHME GBD & Disease burden, expenditure \\
+Economy & World Bank, UNDP HDI, IMF & GDP, poverty, HDI \\
+Education & World Bank, UNESCO UIS, OECD PISA & Enrollment, literacy \\
+National Stats & PBS, US Census, UK ONS, IBGE, ABS & Official census data \\
+Research & Max Planck, INED, PAA, IUSSP & Academic datasets \\
+Tools & Gapminder, OWID, Worldometers & Visualizations, counters \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+This directory eliminates the biggest pain point in demographic research:
+\textbf{finding the right data source}. Whether you need Pakistan's Census 2023
+tables, Nigeria's life expectancy trends, or global CO2 emissions per capita --
+it's all linked and categorized.
+
+\section{Technical Architecture}
+
+HumanScape is built with modern web technologies optimized for performance and accuracy:
+
+\begin{itemize}[leftmargin=2cm]
+\item \textbf{Data Pipeline:} A Python pipeline fetches UN WPP 2024 data, processes
+it into a compact binary format, and generates GeoJSON topology with country
+boundaries from Natural Earth
+\item \textbf{Frontend:} TypeScript + Vite for blazing-fast builds; Canvas API for
+high-performance map rendering
+\item \textbf{Visualization:} Custom SVG glyph system showing age pyramids, mortality
+curves, and fertility patterns -- all computed client-side from raw data
+\item \textbf{Pakistan Section:} Dedicated census-level data for all 145+ districts,
+sourced from PBS Census 2023 and AJ\&K Bureau of Statistics
+\item \textbf{GDP Data:} World Bank API integration pulling 2025 GDP per capita for
+178 countries
+\item \textbf{Country Areas:} 100+ official area overrides from national statistics offices
+\item \textbf{Accessibility:} Semantic HTML, ARIA labels, keyboard navigation,
+reduced-motion support, high-contrast dark mode
+\end{itemize}
+
+\subsection{Data Verification}
+
+Every number on HumanScape can be traced back to its source. The build pipeline runs
+automated checks: population totals match UN published figures exactly (World:
+8,091,735,000; India: 1,438,070,000; China: 1,422,585,000; Pakistan: 247,504,000).
+Deaths by age match official UN totals within a median of 0.2\%.
+
+\section{Pakistan: A Deep Dive}
+
+The Pakistan section is one of HumanScape's most detailed components:
+
+\begin{itemize}[leftmargin=2cm]
+\item \textbf{Complete Census 2023 data} for all 145+ districts from the Pakistan
+Bureau of Statistics
+\item \textbf{AJ\&K Census 2023} -- All 10 districts with population, sex, area,
+density, and growth rates
+\item \textbf{Gilgit-Baltistan data} with population projections using growth rates
+from the 2017 census
+\item \textbf{District boundaries} verified against OCHA administrative boundary files
+\item \textbf{Historical data from 1950} with projections through 2100
+\item \textbf{Pakistan's international borders} -- India (3,323 km), Afghanistan
+(2,640 km), Iran (909 km), China (523 km)
+\end{itemize}
+
+\section{For Researchers and Data Scientists}
+
+\begin{itemize}[leftmargin=2cm]
+\item \textbf{CSV Download:} Export any country's data for analysis in R, Python,
+Excel, or any statistical software
+\item \textbf{Compare Mode:} Overlay two countries on the same chart to see
+demographic differences side by side
+\item \textbf{150-year timeline:} Slide from 1950 to 2100 to watch demographic
+transitions unfold
+\item \textbf{Consistent methodology:} The UN applies the same methods everywhere,
+making cross-country comparisons fair
+\item \textbf{Open source:} All code is on GitHub -- fork it, modify it, build on it
+\end{itemize}
+
+\section{Who Is This For?}
+
+\begin{itemize}[leftmargin=2cm]
+\item \textbf{Demographers:} Access age-structured data, fertility schedules, and
+mortality profiles without navigating UN Data Portal interfaces
+\item \textbf{Students and Educators:} Teach population concepts with interactive
+visualizations that make abstract numbers tangible
+\item \textbf{Journalists:} Quickly verify population claims, find authoritative
+sources, and download data for stories
+\item \textbf{Policy Analysts:} Compare demographic indicators across countries and
+see projections for evidence-based policy
+\item \textbf{Data Scientists:} Use CSV exports as input for machine learning,
+economic modeling, or geographic analysis
+\item \textbf{Urban Planners:} Understand population density, urbanization trends,
+and migration patterns
+\end{itemize}
+
+\vspace{0.5cm}
+
+\begin{quote}
+\textit{``Demography is the study of human populations -- their size, composition,
+and distribution across places -- and the process through which populations change.''}
+--- The Population Reference Bureau
+\end{quote}
+
+\section{The Vision}
+
+HumanScape started as a project to visualize Pakistan's census data. It has grown
+into something bigger: a complete, open, free portal to the world's population
+knowledge. Our vision is to make demographic data as accessible as a weather
+forecast -- something anyone can check, understand, and use to make better decisions.
+
+We believe that when people can \textit{see} how populations change -- the aging of
+Japan, the youth bulge of Sub-Saharan Africa, the urbanization of China -- they gain
+a deeper understanding of the forces shaping our world.
+
+\vspace{0.5cm}
+\begin{center}
+\fcolorbox{navy}{navy!5}{\parbox{0.8\textwidth}{\centering\color{white}
+\vspace{0.3cm}
+{\Large\bfseries Explore HumanScape}\\[0.3cm]
+{\color{gray!70}Free. Open source. No login required.}\\[0.2cm]
+{\color{gold}\url{muhammad-mehdi12.github.io/demography-atlas}}
+\vspace{0.3cm}
+}}
+\end{center}
+
+\vspace{1cm}
+
+\begin{center}
+\textbf{GeoScape Analytics Lab}\\[0.2cm]
+\textit{Built by Muhammad Mehdi and the GeoScape Analytics Lab team.}\\
+\textit{Data from the United Nations World Population Prospects 2024 and the World Bank.}\\
+\textit{Licensed under CC BY 3.0 IGO.}
+\end{center}
+
+\vspace{1cm}
+\begin{center}
+\textcolor{gray}{\small
+GitHub: \url{github.com/MUHAMMAD-MEHDI12/demography-atlas} $\vert$
+LinkedIn: GeoScape Analytics Lab $\vert$
+Data: \url{population.un.org/wpp}\\[0.3cm]
+\copyright{} 2026 GeoScape Analytics Lab. Data CC BY 3.0 IGO (United Nations). Code MIT License.
+}
+\end{center}
+
+\end{document}

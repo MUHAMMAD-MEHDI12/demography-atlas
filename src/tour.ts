@@ -8,7 +8,9 @@ export interface TourStop {
   go: () => number;
 }
 
-const STEP_MS = 2500; // time on each place, flight included
+const HOLD_MS = 2500; // time spent standing on each place, after the flight
+const TOUR_ICON = `<path d="M4 18l5-6 4 3 7-9" /><circle cx="20" cy="6" r="1.6" />`;
+const STOP_ICON = `<rect x="6" y="6" width="12" height="12" rx="2" />`;
 
 export class Tour {
   running = false;
@@ -32,6 +34,7 @@ export class Tour {
     this.running = true;
     this.i = -1;
     this.button.classList.add("is-on");
+    this.button.querySelector("svg")!.innerHTML = STOP_ICON;
     this.button.querySelector(".tb-label")!.textContent = "Stop tour";
     this.caption.hidden = false;
     this.next();
@@ -43,6 +46,7 @@ export class Tour {
     clearTimeout(this.timer);
     this.running = false;
     this.button.classList.remove("is-on");
+    this.button.querySelector("svg")!.innerHTML = TOUR_ICON;
     this.button.querySelector(".tb-label")!.textContent = this.label;
     if (finished) {
       this.caption.querySelector(".tc-rank")!.textContent = "Tour finished";
@@ -59,7 +63,7 @@ export class Tour {
     this.caption.querySelector(".tc-title")!.textContent = stop.title;
     this.caption.querySelector(".tc-detail")!.textContent = stop.detail;
     const flight = stop.go();
-    const total = Math.max(STEP_MS, flight);
+    const total = flight + HOLD_MS;
     this.bar(0, 0);
     requestAnimationFrame(() => requestAnimationFrame(() => this.bar(100, total)));
     this.timer = window.setTimeout(() => this.next(), total);
@@ -73,7 +77,7 @@ export class Tour {
 }
 
 export const tourMarkup = (label: string) => ({
-  button: `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 18l5-6 4 3 7-9" /><circle cx="20" cy="6" r="1.6" /></svg><span class="tb-label">${label}</span>`,
+  button: `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">${TOUR_ICON}</svg><span class="tb-label">${label}</span>`,
   caption: `<div class="tc-head"><span class="tc-rank"></span><button type="button" class="tc-close" aria-label="Stop tour">×</button></div>
     <strong class="tc-title"></strong><span class="tc-detail"></span><div class="tc-progress"><i></i></div>`,
 });

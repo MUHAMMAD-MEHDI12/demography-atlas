@@ -523,11 +523,11 @@ export class WorldMap {
         const cx = (box[0][0] + box[1][0]) / 2, cy = (box[0][1] + box[1][1]) / 2;
         ctx.textAlign = "center";
         ctx.fillStyle = c.ink;
-        ctx.font = `600 ${Math.min(15, Math.max(10, w / 14)).toFixed(0)}px "IBM Plex Sans Condensed", sans-serif`;
+        ctx.font = `600 ${Math.min(15, Math.max(10, w / 14)).toFixed(0)}px "Times New Roman", Times, serif`;
         ctx.fillText(d.label, cx, cy);
         if (d.note && w > 150) {
           ctx.globalAlpha = 0.75;
-          ctx.font = `${Math.min(12, Math.max(9, w / 20)).toFixed(0)}px "IBM Plex Sans Condensed", sans-serif`;
+          ctx.font = `${Math.min(12, Math.max(9, w / 20)).toFixed(0)}px "Times New Roman", Times, serif`;
           ctx.fillText(d.note, cx, cy + 15);
           ctx.globalAlpha = 1;
         }

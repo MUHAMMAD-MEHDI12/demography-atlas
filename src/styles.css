@@ -11,8 +11,8 @@
   --highlight: #e2a93a;
   --gain: #2d7a5a;
   --loss: #b8472e;
-  --sans: "IBM Plex Sans Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
-  --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --sans: "Times New Roman", Times, "Liberation Serif", "Nimbus Roman", Tinos, serif;
+  --serif: "Times New Roman", Times, "Liberation Serif", "Nimbus Roman", Tinos, serif;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -1747,4 +1747,14 @@ a:hover {
     width: 100% !important;
     height: auto !important;
   }
+}
+
+/* ---------- play and tour buttons show their state ----------------------------- */
+.yp-play.is-playing {
+  background: var(--highlight);
+  color: var(--ink);
+}
+.tour-btn.is-on svg rect {
+  fill: currentColor;
+  stroke: none;
 }

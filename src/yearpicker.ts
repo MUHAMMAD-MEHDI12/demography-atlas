@@ -2,6 +2,8 @@
 // step through with the arrow keys. The selected year sits in the box.
 
 const SPACING = 58; // px between years
+const PLAY_PATH = "M7 4.5v15l12.5-7.5z";
+const PAUSE_PATH = "M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z";
 
 export class YearPicker {
   private track: HTMLElement;
@@ -9,6 +11,7 @@ export class YearPicker {
   private shown = NaN;
   private active = -1;
   private drag: { x: number; year: number; moved: boolean } | null = null;
+  private shownPlaying: boolean | null = null;
 
   constructor(
     readonly el: HTMLElement,
@@ -94,6 +97,16 @@ export class YearPicker {
 
   /** Draw the strip for a (possibly fractional) year. */
   render(year: number, playing: boolean) {
+    // the button is updated first: pausing stops the year from moving, and the
+    // icon still has to flip
+    if (playing !== this.shownPlaying) {
+      this.shownPlaying = playing;
+      const btn = this.el.querySelector(".yp-play")!;
+      btn.classList.toggle("is-playing", playing);
+      btn.setAttribute("aria-label", playing ? "Pause" : "Play from this year");
+      btn.setAttribute("title", playing ? "Pause" : "Play from this year");
+      btn.querySelector("path")!.setAttribute("d", playing ? PAUSE_PATH : PLAY_PATH);
+    }
     if (year === this.shown) return;
     this.shown = year;
     const offset = (year - this.start) * SPACING;
@@ -108,8 +121,6 @@ export class YearPicker {
       this.el.setAttribute("aria-valuetext", `${y}, ${y > this.lastEstimate ? "UN projection" : "UN estimate"}`);
       this.el.querySelector(".yp-phase")!.textContent = y > this.lastEstimate ? "UN projection" : "UN estimate";
     }
-    this.el.querySelector(".yp-play")!.setAttribute("aria-label", playing ? "Pause" : "Play from this year");
-    this.el.querySelector(".yp-play path")!.setAttribute("d", playing ? "M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z" : "M7 4.5v15l12.5-7.5z");
   }
 
   /** Keep the picker centred under the chart. */

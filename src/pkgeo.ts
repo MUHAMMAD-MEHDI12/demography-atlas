@@ -22,9 +22,13 @@ declare global {
 export async function loadPkGeo(): Promise<MapExtras> {
   let file = window.__PK_GEO__;
   if (!file) {
-    const res = await fetch(`${import.meta.env.BASE_URL}data/pk-geo.json`);
-    if (!res.ok) return {};
-    file = (await res.json()) as PkGeoFile;
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}data/pk-geo.json`);
+      if (!res.ok) return {};
+      file = (await res.json()) as PkGeoFile;
+    } catch {
+      return {}; // offline or blocked: the map still works without the outline
+    }
   }
   const parts = (t: PkGeoFile["outline"] | PkGeoFile["kashmir"], key: "outline" | "kashmir") =>
     (feature(t as never, (t as never as { objects: Record<string, GeometryCollection> }).objects[key]) as unknown as { features: Feature<Geometry, null>[] }).features;
