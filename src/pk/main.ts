@@ -411,10 +411,18 @@ class PakistanApp {
       const labels = broad ? this.data.broadLabels : this.data.ageLabels;
       const age = u.age!;
       const pick = (reg: "overall" | "urban" | "rural", sex: "m" | "f", i: number) => (broad ? age[reg].bands![sex][i] : age[reg][sex][i]);
+      const vals = labels.map((_, i) => [pick("overall", "m", i), pick("overall", "f", i), pick("urban", "m", i), pick("urban", "f", i), pick("rural", "m", i), pick("rural", "f", i)]);
+      const maxV = Math.max(...vals.flat()) || 1;
+      const bar = (v: number, cls: string) => `<span class="d-bar ${cls}" style="width:${Number.isFinite(v) ? (v / maxV) * 100 : 0}%"></span>`;
       const rows = labels
-        .map((lab, i) => `<tr><th scope="row">${lab}</th>${(["overall", "urban", "rural"] as const).map((r) => `<td class="num">${fmt(pick(r, "m", i), 2)}</td><td class="num">${fmt(pick(r, "f", i), 2)}</td>`).join("")}</tr>`)
+        .map((lab, i) => {
+          const [m, f, um, uf, rm, rf] = vals[i];
+          return `<tr><th scope="row">${lab}</th><td class="d-bar-cell d-left">${bar(m, "is-m")}</td><td class="num">${fmt(m, 2)}</td><td class="num">${fmt(f, 2)}</td><td class="d-bar-cell">${bar(f, "is-f")}</td><td class="num">${fmt(um, 2)}</td><td class="num">${fmt(uf, 2)}</td><td class="num">${fmt(rm, 2)}</td><td class="num">${fmt(rf, 2)}</td></tr>`;
+        })
         .reverse()
         .join("");
+      const tally = (reg: "overall" | "urban" | "rural", sex: "m" | "f") => fmt(labels.reduce((a, _, i) => a + pick(reg, sex, i), 0), 1);
+      const tfoot = `<tr><th scope="row">All ages</th><td></td><td class="num">${tally("overall", "m")}</td><td class="num">${tally("overall", "f")}</td><td></td><td class="num">${tally("urban", "m")}</td><td class="num">${tally("urban", "f")}</td><td class="num">${tally("rural", "m")}</td><td class="num">${tally("rural", "f")}</td></tr>`;
       const facts: [string, string][] = [
         ["Population", int(u.population)], ["Male", int(u.male)], ["Female", int(u.female)], ["Transgender", int(u.transgender)],
         ["Urban", int(u.urban)], ["Rural", int(u.rural)], ["Area (km²)", int(u.area)], ["People per km²", u.density === null ? "no data" : fmt(u.density, 1)],
@@ -424,8 +432,8 @@ class PakistanApp {
         <div class="table-wrap"><table class="d-table"><tbody>${facts.map(([k, v]) => `<tr><th scope="row">${k}</th><td class="num">${v}</td></tr>`).join("")}</tbody></table></div>
         <h3 class="d-title" style="margin-top:18px">Population by age and sex${broad ? " (broad age groups)" : ""}</h3>
         <p class="muted d-sub">Share of each area's population, in per cent (males and females together add up to 100)</p>
-        <div class="table-wrap"><table class="d-table"><thead><tr><th scope="col" rowspan="2">Age</th><th scope="col" colspan="2" class="num">All residents</th><th scope="col" colspan="2" class="num">Urban</th><th scope="col" colspan="2" class="num">Rural</th></tr>
-        <tr><th scope="col" class="num">Male</th><th scope="col" class="num">Female</th><th scope="col" class="num">Male</th><th scope="col" class="num">Female</th><th scope="col" class="num">Male</th><th scope="col" class="num">Female</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+        <div class="table-wrap"><table class="d-table"><thead><tr><th scope="col" rowspan="2">Age</th><th scope="col" colspan="4" class="num">All residents</th><th scope="col" colspan="2" class="num">Urban</th><th scope="col" colspan="2" class="num">Rural</th></tr>
+        <tr><th scope="col" colspan="2" class="num">Male</th><th scope="col" colspan="2" class="num">Female</th><th scope="col" class="num">Male</th><th scope="col" class="num">Female</th><th scope="col" class="num">Male</th><th scope="col" class="num">Female</th></tr></thead><tbody>${rows}</tbody><tfoot>${tfoot}</tfoot></table></div>`;
       this.csv = {
         name: `${slug(u.name)}-census-2023.csv`,
         rows: [
@@ -527,8 +535,11 @@ class PakistanApp {
       }
       const row = (e.target as Element).closest<HTMLElement>("tr[data-id]");
       if (row) {
-        dlg.close();
-        this.setPrimary(this.byId.get(Number(row.dataset.id))!, "fly");
+        const u = this.byId.get(Number(row.dataset.id));
+        if (u) {
+          this.detailsTab = "district";
+          this.setPrimary(u, "fly");
+        }
       }
     });
     for (const btn of document.querySelectorAll<HTMLButtonElement>("#details [role=tab]")) {

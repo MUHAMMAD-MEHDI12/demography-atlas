@@ -423,41 +423,9 @@ export class WorldMap {
     ctx.lineWidth = fill ? 0.5 : 0.6;
     ctx.stroke();
 
-    // Focus effect: vignette + glow when a selection is active
+    // Glow around the selected features
     const sel = this.features.filter((f) => this.selected.has(Number(f.id)));
     if (sel.length) {
-      // 1) full-screen dark wash
-      ctx.fillStyle = c.ocean;
-      ctx.globalAlpha = 0.55;
-      ctx.fillRect(0, 0, this.w, this.h);
-      ctx.globalAlpha = 1;
-
-      // 2) compute the bounding-box centre of the selected features on screen
-      let minX = this.w, minY = this.h, maxX = 0, maxY = 0;
-      for (const f of sel) {
-        const b = path.bounds(f);
-        minX = Math.min(minX, b[0][0]);
-        minY = Math.min(minY, b[0][1]);
-        maxX = Math.max(maxX, b[1][0]);
-        maxY = Math.max(maxY, b[1][1]);
-      }
-      const cx = (minX + maxX) / 2;
-      const cy = (minY + maxY) / 2;
-      const featureRadius = Math.max(maxX - minX, maxY - minY) / 2;
-      const innerR = featureRadius * 1.1;
-      const outerR = featureRadius * 4.5;
-
-      // 3) radial gradient: punch a bright hole over the selection
-      const vig = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
-      vig.addColorStop(0, "rgba(0,0,0,0)");
-      vig.addColorStop(0.35, "rgba(0,0,0,0)");
-      vig.addColorStop(1, "rgba(0,0,0,0.45)");
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.fillStyle = vig;
-      ctx.fillRect(0, 0, this.w, this.h);
-      ctx.globalCompositeOperation = "source-over";
-
-      // 4) glow around selected
       ctx.save();
       ctx.beginPath();
       for (const f of sel) path(f);
