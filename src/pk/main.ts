@@ -343,6 +343,8 @@ class PakistanApp {
         }
         return u.population === null ? "not available" : `${compact(u.population, true)}${u.popYear && u.popYear !== 2023 ? ` (${u.popYear})` : ""}`;
       },
+      male: (u) => (u.male === null ? "not available" : `${compact(u.male, true)}${this.year !== 2023 ? " (2023)" : ""}`),
+      female: (u) => (u.female === null ? "not available" : `${compact(u.female, true)}${this.year !== 2023 ? " (2023)" : ""}`),
       growth: (u) => (u.growth === null ? "no data" : `${u.growth > 0 ? "+" : ""}${fmt(u.growth, 2)}%`),
       area: (u) => (u.area === null ? "not available" : `${int(u.area)} km²`),
       density: (u) => int(u.density),
@@ -437,6 +439,7 @@ class PakistanApp {
       $("details-sub").textContent = `All ${this.units.length} areas. Click a column to sort, a row to open the area.`;
       const cols: [string, string, (u: District) => number | string][] = [
         ["name", "District", (u) => u.name], ["province", "Province", (u) => u.province], ["population", "Population", (u) => u.population ?? NaN],
+        ["male", "Male", (u) => u.male ?? NaN], ["female", "Female", (u) => u.female ?? NaN],
         ["growth", "Growth %", (u) => u.growth ?? NaN], ["area", "Area km²", (u) => u.area ?? NaN], ["density", "Per km²", (u) => u.density ?? NaN],
         ["urbanPct", "Urban %", (u) => u.urbanPct ?? NaN], ["sexRatio", "Sex ratio", (u) => u.sexRatio ?? NaN], ["pop2017", "2017", (u) => u.pop2017 ?? NaN],
       ];
