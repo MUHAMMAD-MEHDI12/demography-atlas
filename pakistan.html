@@ -68,6 +68,10 @@
 
         <div class="dock-panel" data-panel="stats">
           <p class="kind-note" id="kind-note" hidden></p>
+          <button type="button" class="details-btn" id="details-btn" aria-haspopup="dialog">
+            <span>Detailed statistics</span>
+            <small>Age tables for this district and a sortable table of every district</small>
+          </button>
           <dl class="stats" id="stats">
             <div><dt>Population</dt><dd data-k="population"></dd></div>
             <div><dt>Male</dt><dd data-k="male"></dd></div>
@@ -80,10 +84,6 @@
             <div><dt>Population in 2017</dt><dd data-k="pop2017"></dd></div>
             <div><dt>Rank in Pakistan by population</dt><dd data-k="rank"></dd></div>
           </dl>
-          <button type="button" class="details-btn" id="details-btn" aria-haspopup="dialog">
-            <span>Detailed statistics</span>
-            <small>Age tables for this district and a sortable table of every district</small>
-          </button>
           <section class="panel-block" aria-labelledby="tehsil-title">
             <h2 id="tehsil-title">Tehsils</h2>
             <p class="tehsils" id="tehsils"></p>
