@@ -131,8 +131,15 @@
     </div>
 
     <footer class="site" id="site">
+      <div class="site-tabs" role="tablist" aria-label="About and data sources">
+        <button type="button" role="tab" data-tab="about" aria-selected="true">About</button>
+        <button type="button" role="tab" data-tab="lab" aria-selected="false" hidden>The lab</button>
+        <button type="button" role="tab" data-tab="sources" aria-selected="false">Data sources</button>
+        <button type="button" role="tab" data-tab="more-sources" aria-selected="false">All data links</button>
+        <button type="button" role="tab" data-tab="contact" aria-selected="false">Contact</button>
+      </div>
       <div class="site-inner">
-        <section id="about" class="site-block">
+        <section id="about" class="site-block site-panel" data-panel="about">
           <h2>About the Pakistan section</h2>
           <p>
             This section shows every district of Pakistan from the 2023 census. The triangle around a district holds three age
@@ -144,13 +151,13 @@
           </p>
         </section>
 
-        <section id="lab" class="site-block" hidden>
+        <section id="lab" class="site-block site-panel" data-panel="lab" hidden>
           <h2 id="lab-name">About the lab</h2>
           <p id="lab-intro" hidden></p>
           <p id="lab-website" hidden></p>
         </section>
 
-        <section id="sources" class="site-block site-wide">
+        <section id="sources" class="site-block site-wide site-panel" data-panel="sources" hidden>
           <h2>Data sources and how to verify them</h2>
           <p>
             All figures come from the <strong>7th Population and Housing Census 2023</strong> of the
@@ -206,7 +213,7 @@
           </ul>
         </section>
 
-        <section id="more-sources" class="site-block site-wide">
+        <section id="more-sources" class="site-block site-wide site-panel" data-panel="more-sources" hidden>
           <h2>Population &amp; demography data sources</h2>
           <p>Every major website for population, demographic, and development data — all in one place.</p>
           <h3>Population &amp; Demography</h3>
@@ -281,7 +288,7 @@
           </ul>
         </section>
 
-        <section id="contact" class="site-block">
+        <section id="contact" class="site-block site-panel" data-panel="contact" hidden>
           <h2>Contact</h2>
           <p>Questions, corrections or ideas for this atlas are welcome.</p>
           <ul class="contact-list" id="contact-list"></ul>

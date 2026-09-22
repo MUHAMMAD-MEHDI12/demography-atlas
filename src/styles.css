@@ -1624,20 +1624,53 @@ a:hover {
   background: var(--land);
   border-top: 1px solid var(--rule);
 }
-.site-inner {
-  display: grid;
-  gap: 8px 48px;
+.site-tabs {
+  display: flex;
+  gap: 2px;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 36px 16px 12px;
+  padding: 24px 16px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--rule);
+}
+.site-tabs::-webkit-scrollbar {
+  display: none;
+}
+.site-tabs button {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 2.5px solid transparent;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.site-tabs button:hover {
+  color: var(--ink);
+}
+.site-tabs button[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+@media (min-width: 960px) {
+  .site-tabs {
+    padding: 36px 32px 0;
+  }
+}
+.site-inner {
+  display: block;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 8px 16px 12px;
 }
 @media (min-width: 960px) {
   .site-inner {
-    grid-template-columns: 1fr 1fr;
-    padding: 56px 32px 16px;
-  }
-  .site-wide {
-    grid-column: 1 / -1;
+    padding: 12px 32px 16px;
   }
 }
 .site-block {

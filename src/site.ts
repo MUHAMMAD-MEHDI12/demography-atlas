@@ -3,6 +3,40 @@
 // ---------------------------------------------------------------------------
 // Anything left as "" is hidden.
 
+/** Turns the footer sections (#about, #lab, #sources, #contact, ...) into tabs. */
+export function initSiteTabs() {
+  const bar = document.querySelector<HTMLElement>(".site-tabs");
+  if (!bar) return;
+  const buttons = [...bar.querySelectorAll<HTMLButtonElement>("[data-tab]")];
+  if (!buttons.length) return;
+  const panels = [...document.querySelectorAll<HTMLElement>(".site-panel")];
+  const byPanel = new Map(panels.map((p) => [p.dataset.panel, p]));
+  const activate = (name: string, scroll = false) => {
+    if (!byPanel.has(name)) return;
+    for (const b of buttons) b.setAttribute("aria-selected", String(b.dataset.tab === name));
+    for (const p of panels) p.hidden = p.dataset.panel !== name;
+    if (scroll) {
+      byPanel.get(name)!.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    }
+  };
+  for (const b of buttons) b.addEventListener("click", () => activate(String(b.dataset.tab)));
+  for (const a of document.querySelectorAll<HTMLAnchorElement>(".panel-links a[href^='#']")) {
+    const name = a.getAttribute("href")!.slice(1);
+    if (!byPanel.has(name)) continue;
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      activate(name, true);
+      try {
+        history.replaceState(null, "", `#${name}`);
+      } catch {
+        /* ignore */
+      }
+    });
+  }
+  const hit = location.hash.slice(1).split("&")[0];
+  if (byPanel.has(hit)) activate(hit);
+}
+
 export const SITE = {
   lab: {
     name: "GeoScape Analytics Lab (GSAL)",

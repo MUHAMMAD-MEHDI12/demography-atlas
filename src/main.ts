@@ -6,7 +6,7 @@ import { WorldMap, type WorldData, type MapExtras } from "./map";
 import { loadPkGeo } from "./pkgeo";
 import { formatPopulation, fmt, pct, compact } from "./format";
 import { PopulationChart, ChangeChart, type ChangeMode } from "./charts";
-import { SITE } from "./site";
+import { SITE, initSiteTabs } from "./site";
 import { Details } from "./details";
 import { YearPicker } from "./yearpicker";
 import { SearchBox, searchMarkup } from "./search";
@@ -119,6 +119,7 @@ class App {
     this.popChart = new PopulationChart($("pop-chart"), data.yearStart, data.lastEstimate);
     this.changeChart = new ChangeChart($("change-chart"), data.lastEstimate);
     this.renderSiteInfo();
+    initSiteTabs();
     this.details = new Details(
       data,
       () => ({ primary: this.primary, compare: this.compare, year: Math.round(this.year) }),
@@ -393,8 +394,9 @@ class App {
   private renderSiteInfo() {
     const { lab, contact } = SITE;
     const link = (href: string, text: string) => Object.assign(document.createElement("a"), { href, textContent: text, target: href.startsWith("mailto:") ? "" : "_blank", rel: "noopener" });
+    const labTab = document.querySelector<HTMLButtonElement>('.site-tabs [data-tab="lab"]');
     if (lab.name || lab.intro) {
-      $("lab").hidden = false;
+      if (labTab) labTab.hidden = false;
       $("lab-name").textContent = lab.name ? `About ${lab.name}` : "About the lab";
       const intro = $("lab-intro");
       intro.textContent = lab.intro;

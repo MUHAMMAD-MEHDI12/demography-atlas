@@ -4,7 +4,7 @@ import { Glyph, type ArmSpec, type ArmValues, type ReadoutRow } from "../glyph";
 import { WorldMap, type WorldData } from "../map";
 import { ChartMotion } from "../motion";
 import { fmt, compact } from "../format";
-import { SITE } from "../site";
+import { SITE, initSiteTabs } from "../site";
 import { SearchBox, searchMarkup } from "../search";
 import { Tour, tourMarkup } from "../tour";
 import { initTheme } from "../theme";
@@ -178,6 +178,7 @@ class PakistanApp {
       "Top 10 districts",
     );
     this.renderSiteInfo();
+    initSiteTabs();
     new ResizeObserver(() => this.resize()).observe($("stage"));
     initTheme(() => {
       this.recolour();
@@ -784,7 +785,8 @@ class PakistanApp {
   private renderSiteInfo() {
     const { lab, contact } = SITE;
     const link = (href: string, text: string) => Object.assign(document.createElement("a"), { href, textContent: text, target: href.startsWith("mailto:") ? "" : "_blank", rel: "noopener" });
-    $("lab").hidden = false;
+    const labTab = document.querySelector<HTMLButtonElement>('.site-tabs [data-tab="lab"]');
+    if (labTab) labTab.hidden = false;
     $("lab-name").textContent = `About ${lab.name}`;
     Object.assign($("lab-intro"), { textContent: lab.intro, hidden: false });
     const w = $("lab-website");

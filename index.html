@@ -132,8 +132,14 @@
     </div>
 
     <footer class="site" id="site">
+      <div class="site-tabs" role="tablist" aria-label="About and data sources">
+        <button type="button" role="tab" data-tab="about" aria-selected="true">About</button>
+        <button type="button" role="tab" data-tab="lab" aria-selected="false" hidden>The lab</button>
+        <button type="button" role="tab" data-tab="sources" aria-selected="false">Data sources</button>
+        <button type="button" role="tab" data-tab="contact" aria-selected="false">Contact</button>
+      </div>
       <div class="site-inner">
-        <section id="about" class="site-block">
+        <section id="about" class="site-block site-panel" data-panel="about">
           <h2>About this atlas</h2>
           <p>
             Demography Atlas shows how the population of every country and area changes between 1950 and 2100.
@@ -146,13 +152,13 @@
           </p>
         </section>
 
-        <section id="lab" class="site-block" hidden>
+        <section id="lab" class="site-block site-panel" data-panel="lab" hidden>
           <h2 id="lab-name">About the lab</h2>
           <p id="lab-intro" hidden></p>
           <p id="lab-website" hidden></p>
         </section>
 
-        <section id="sources" class="site-block site-wide">
+        <section id="sources" class="site-block site-wide site-panel" data-panel="sources" hidden>
           <h2>Data sources and how to verify them</h2>
           <p>
             Every population number on this atlas comes from the <strong>United Nations World Population Prospects 2024</strong>, published by the
@@ -328,7 +334,7 @@
           </p>
         </section>
 
-        <section id="contact" class="site-block">
+        <section id="contact" class="site-block site-panel" data-panel="contact" hidden>
           <h2>Contact</h2>
           <p id="contact-intro">Questions, corrections or ideas for this atlas are welcome.</p>
           <ul class="contact-list" id="contact-list"></ul>
