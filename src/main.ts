@@ -467,7 +467,6 @@ class App {
     $("compare-btn").addEventListener("click", () => this.openPicker("compare"));
     $("compare-clear").addEventListener("click", () => this.setCompare(null));
     $("details-btn").addEventListener("click", () => this.details.open());
-    $("details-link").addEventListener("click", () => this.details.open());
     for (const btn of document.querySelectorAll<HTMLButtonElement>(".toggle button")) {
       btn.addEventListener("click", () => {
         this.changeMode = btn.dataset.mode as ChangeMode;

@@ -524,7 +524,6 @@ class PakistanApp {
       dlg.showModal();
     };
     $("details-btn").addEventListener("click", open);
-    $("details-link").addEventListener("click", open);
     $("details-close").addEventListener("click", () => dlg.close());
     dlg.addEventListener("click", (e) => {
       if (e.target === dlg) return dlg.close();
