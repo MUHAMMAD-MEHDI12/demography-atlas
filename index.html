@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content="How every country's age structure, deaths and births change from 1950 to 2100, using UN World Population Prospects 2024." />
     <title>HumanScape</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>" />
+    <link rel="icon" href="assets/favicon.png" />
   </head>
   <body>
     <div class="app">
@@ -15,11 +15,7 @@
         <svg id="glyph" role="img" aria-labelledby="glyph-desc"><desc id="glyph-desc">Population, deaths and births by age for the selected place and year.</desc></svg>
         <header class="head">
           <div class="brand">
-            <svg class="brand-logo" viewBox="0 0 28 28" width="22" height="22" aria-hidden="true">
-              <circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
-              <path d="M14 4 L23 22 L5 22 Z" fill="none" stroke="currentColor" stroke-width="1.2"/>
-              <circle cx="14" cy="15.5" r="2" fill="currentColor"/>
-            </svg>
+            <span class="globe brand-globe" role="img" aria-label="HumanScape"></span>
             <span class="brand-name">HumanScape</span>
           </div>
           <button class="place" id="place-btn" type="button" aria-haspopup="dialog">
@@ -63,11 +59,7 @@
         </div>
         <div class="loading" id="status" role="status">
           <div class="ld-brand">
-            <svg class="ld-logo" viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
-              <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
-              <path d="M20 6 L32 30 L8 30 Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
-              <circle cx="20" cy="22" r="3" fill="currentColor"/>
-            </svg>
+            <span class="globe ld-globe" role="img" aria-label="HumanScape"></span>
             <span class="ld-name">HumanScape</span>
           </div>
           <p class="ld-sub">Loading UN population data&hellip;</p>

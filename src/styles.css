@@ -288,9 +288,32 @@ button {
   padding: 4px 0;
   pointer-events: auto;
 }
-.brand-logo {
-  color: var(--ink);
+.globe {
+  position: relative;
+  display: inline-block;
   flex-shrink: 0;
+  border-radius: 50%;
+  background: url("./assets/earth.jpg") repeat-x 0 0 / 200% 100%;
+  animation: globe-spin 16s linear infinite;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+.globe::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow:
+    inset 2px 3px 4px rgba(255, 255, 255, 0.35),
+    inset -2px -3px 6px rgba(0, 0, 0, 0.55);
+}
+@keyframes globe-spin {
+  to { background-position: calc(var(--globe-w, 0px) * -2) 0; }
+}
+.brand-globe {
+  width: 22px;
+  height: 22px;
+  --globe-w: 22px;
 }
 .brand-name {
   font-family: var(--serif);
@@ -909,12 +932,10 @@ button {
   justify-content: center;
   gap: 10px;
 }
-.ld-logo {
-  color: var(--ink);
-  animation: ld-spin 3s linear infinite;
-}
-@keyframes ld-spin {
-  to { transform: rotate(360deg); }
+.ld-globe {
+  width: 40px;
+  height: 40px;
+  --globe-w: 40px;
 }
 .ld-name {
   font-family: var(--serif);
@@ -955,7 +976,7 @@ button {
   50%      { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ld-logo,
+  .globe,
   .ld-bar span,
   .ld-sub {
     animation: none;
