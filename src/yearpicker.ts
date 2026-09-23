@@ -110,7 +110,7 @@ export class YearPicker {
     if (year === this.shown) return;
     this.shown = year;
     const offset = (year - this.start) * SPACING;
-    this.track.style.transform = `translateX(${(-offset - SPACING / 2).toFixed(1)}px)`;
+    this.track.style.transform = `translateX(${Math.round(-offset - SPACING / 2)}px)`;
     const idx = Math.round(year) - this.start;
     if (idx !== this.active) {
       this.items[this.active]?.classList.remove("is-active");
@@ -125,6 +125,6 @@ export class YearPicker {
 
   /** Keep the picker centred under the chart. */
   place(x: number, y: number) {
-    this.el.style.transform = `translate(${(x - this.el.offsetWidth / 2).toFixed(1)}px, ${y.toFixed(1)}px)`;
+    this.el.style.transform = `translate(${Math.round(x - this.el.offsetWidth / 2)}px, ${Math.round(y)}px)`;
   }
 }

@@ -109,6 +109,85 @@ def title(s: str) -> str:
     return re.sub(r"\bKpk\b", "KP", t)
 
 
+# USCB ADM3 name (sans " DISTRICT") -> site unit key, for the Age-Sex sheet
+_USCB_MAP = {
+    "MUZAFFARABAD": "MUZAFFARABAD", "NEELUM": "NEELUM", "JHELUM VALLEY": "JHELUM VALLEY",
+    "BAGH": "BAGH", "HAVELI": "HAVELI", "POONCH": "POONCH", "SUDHNOTI": "SUDHNOTI",
+    "KOTLI": "KOTLI", "MIRPUR": "MIRPUR", "BHIMBER": "BHIMBER",
+    "GILGIT": "GILGIT", "GHIZER": "GHIZER", "NAGAR": "NAGAR", "HUNZA": "HUNZA",
+    "DIAMIR": "DIAMER", "ASTORE": "ASTORE", "BALTISTAN": "SKARDU",
+    "GHANCHE": "GHANCHE", "SHIGAR": "SHIGAR", "KHARMANG": "KHARMANG",
+}
+_USCB_LABELS = ("0004", "0509", "1014", "1519", "2024", "2529", "3034", "3539",
+                "4044", "4549", "5054", "5559", "6064", "6569", "7074", "75PL")
+
+
+def fill_ajk_gb_age(units: list[dict]) -> None:
+    """Add the AJK/GB age-sex tables from the US Census Bureau xlsx (Census 2017).
+
+    Mirror of pipeline/patch_ajk_gb_age.py so a full rebuild keeps the same data.
+    The urban/rural arms repeat the overall shares: USCB publishes no urban/rural
+    split for these areas. GB male/female/sex-ratio/pop2017/growth are derived from
+    the same table. Skips (with a printed warning) when the xlsx is not available.
+    """
+    try:
+        import openpyxl
+    except ImportError:
+        print("  warning: openpyxl not installed; AJK/GB kept without age tables")
+        return
+    path = Path(__file__).resolve().parent / "AJK_GB_USCB.xlsx"
+    if not path.exists():
+        print(f"  warning: {path.name} missing; AJK/GB kept without age tables")
+        return
+    ws = openpyxl.load_workbook(path, read_only=True)["Age-Sex"]
+    rows = ws.iter_rows(values_only=True)
+    header = next(rows)
+    cols = {name: header.index(name) for name in
+            ["AREA_NAME", "ADM_LEVEL", "TTOTL", "MTOTL", "FTOTL"]
+            + [f"{p}{l}" for p in ("M", "F") for l in _USCB_LABELS]}
+    data = {}
+    for r in rows:
+        if r[cols["ADM_LEVEL"]] != 3 or not (r[cols["AREA_NAME"]] or "").endswith(" DISTRICT"):
+            continue
+        key = _USCB_MAP.get(r[cols["AREA_NAME"]][:-9])
+        if key is None:
+            continue
+        m = [float(r[cols[f"M{l}"]]) for l in _USCB_LABELS]
+        f = [float(r[cols[f"F{l}"]]) for l in _USCB_LABELS]
+        tot = sum(m) + sum(f)
+        data[key] = {"m": [round(v / tot * 100, 3) for v in m], "f": [round(v / tot * 100, 3) for v in f],
+                     "total": int(tot), "male17": sum(m), "female17": sum(f)}
+    by_key = {u["key"]: u for u in units}
+    for key, d in data.items():
+        u = by_key.get(key)
+        if u is None or u["kind"] not in ("ajk", "gb"):
+            continue
+        share = {"m": d["m"], "f": d["f"], "total": d["total"]}
+        u["age"] = {"detail": "5-year", "overall": share, "urban": share, "rural": share}
+        u["ageSource"] = "US Census Bureau, Census 2017"
+        u["ageYear"] = 2017
+        if u["kind"] == "gb":
+            pop = u["population"]
+            male = round(pop * d["male17"] / (d["male17"] + d["female17"]))
+            u["male"] = male
+            u["female"] = pop - male
+            u["sexRatio"] = round(d["male17"] / d["female17"] * 100, 2)
+            u["pop2017"] = int(d["total"])
+            u["growth"] = round(((pop / d["total"]) ** (1 / 6) - 1) * 100, 2)
+            u["source"] = ("Planning & Development Department, Government of Gilgit-Baltistan, "
+                           "Gilgit-Baltistan at a Glance 2024 (population and area); US Census Bureau, "
+                           "Census 2017 (age and sex)")
+            u["note"] = ("Not part of the PBS census 2023 district tables. Population and area from the "
+                         "GB Planning & Development Department; age structure and sex ratio from the "
+                         "US Census Bureau tabulation of Census 2017.")
+        else:
+            u["source"] = ("AJ&K Bureau of Statistics, P&D Department, AJ&K at a Glance 2023 (Census 2017 "
+                           "and 2022 projection); US Census Bureau, Census 2017 (age structure)")
+            u["note"] = ("Not part of the PBS census 2023 district tables. Population, males and females "
+                         "are the 2022 projection of the AJ&K Bureau of Statistics; the 2017 population is "
+                         "from Census 2017. Age structure from the US Census Bureau tabulation of Census 2017.")
+
+
 def main() -> None:
     t1, t4, t5 = table("TABLE_01"), table("TABLE_04"), table("TABLE_05")
 
@@ -327,6 +406,7 @@ def main() -> None:
         assert len(sel) == len(parts), (name, parts)
         guides[next_id] = sel.geometry.union_all()
         next_id += 1
+    fill_ajk_gb_age(units)
 
     # ---- conform to the boundary files supplied by the site owner ---------------------------
     # National and district boundaries: pipeline/boundaries/gadm41_PAK_0 and _3 (GADM 4.1).

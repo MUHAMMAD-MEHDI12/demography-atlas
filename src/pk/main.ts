@@ -217,12 +217,14 @@ class PakistanApp {
     const badge = $("census-badge");
     badge.classList.toggle("is-empty", !p.age);
     this.glyph.svg.classList.toggle("is-no-age", !p.age);
-    (badge.querySelector(".cb-title") as HTMLElement).textContent = p.age ? `Census ${p.popYear ?? 2023}` : "Age data not available";
+    (badge.querySelector(".cb-title") as HTMLElement).textContent = p.age ? `Census ${p.ageYear ?? p.popYear ?? 2023}` : "Age data not available";
     (badge.querySelector(".cb-sub") as HTMLElement).textContent = !p.age
       ? `${p.name}: no age table is published`
-      : p.age.detail === "broad"
-        ? "Broad age groups from tehsil tables"
-        : "Pakistan Bureau of Statistics";
+      : p.ageSource
+        ? p.ageSource
+        : p.age.detail === "broad"
+          ? "Broad age groups from tehsil tables"
+          : "Pakistan Bureau of Statistics";
     valuesOf(p, this.target);
     if (c) valuesOf(c, this.cmpTarget);
     this.map.select(p.id, c?.id ?? null, (id) => [id], animate && !reducedMotion.matches, stay, this.flightMs);
@@ -398,7 +400,7 @@ class PakistanApp {
     for (const btn of document.querySelectorAll<HTMLButtonElement>("#details [role=tab]")) btn.setAttribute("aria-selected", String(btn.dataset.tab === this.detailsTab));
     const body = $("details-body");
     if (this.detailsTab === "district") {
-      $("details-sub").textContent = `${u.name}, ${u.province}, Census 2023`;
+      $("details-sub").textContent = `${u.name}, ${u.province}, ${u.popLabel ?? "Census 2023"}`;
       if (!u.age) {
         const factsOnly: [string, string][] = [["Population", int(u.population)], ["Area (km²)", int(u.area)], ["People per km²", u.density === null ? "no data" : fmt(u.density, 1)], ["Population in 2017", int(u.pop2017)]];
         body.innerHTML = `<h3 class="d-title">${esc(u.name)}</h3><p class="muted d-sub">${esc(u.note ?? "")}</p>
@@ -443,7 +445,9 @@ class PakistanApp {
           ...labels.map((lab, i) => [lab, ...(["overall", "urban", "rural"] as const).flatMap((r) => [pick(r, "m", i), pick(r, "f", i)])]),
         ],
       };
-      $("details-note").textContent = `Source: PBS Census 2023. Totals from Table 1; age shares from Table ${broad ? "5 (broad groups by tehsil)" : "4 (single years of age, grouped)"}.`;
+      $("details-note").textContent = u.ageSource
+        ? `Source: ${u.source}.`
+        : `Source: PBS Census 2023. Totals from Table 1; age shares from Table ${broad ? "5 (broad groups by tehsil)" : "4 (single years of age, grouped)"}.`;
     } else {
       $("details-sub").textContent = `All ${this.units.length} areas. Click a column to sort, a row to open the area.`;
       const cols: [string, string, (u: District) => number | string][] = [

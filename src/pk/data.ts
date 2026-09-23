@@ -39,8 +39,16 @@ export interface District {
   growth: number | null;
   center: [number, number];
   bounds: [number, number, number, number];
-  /** null where no age table is published (AJK, Gilgit-Baltistan, Occupied Kashmir) */
+  /**
+   * null where no age table is published (Occupied Kashmir). AJK and Gilgit-Baltistan
+   * carry a USCB Census 2017 age structure (district-wide; the urban/rural arms repeat the
+   * overall shares because no urban/rural split is published for those areas).
+   */
   age: { detail: "5-year" | "broad"; overall: AgeShares; urban: AgeShares; rural: AgeShares } | null;
+  /** Source label for areas whose age tables are not the PBS census 2023 ones. */
+  ageSource?: string;
+  /** Census year the age tables come from (PBS 2023 unless overridden). */
+  ageYear?: number;
 }
 
 export interface PakistanData {

@@ -22,6 +22,13 @@ const aliases = {
   900: ["Earth", "Global"],
 };
 
+// everyday names for the non-PBS parts of Pakistan, so the districts show up in search
+const PROVINCE_ALIASES = {
+  "Azad Jammu and Kashmir": ["Azad Kashmir", "AJK", "AJ&K"],
+  "Gilgit-Baltistan": ["Gilgit-Baltistan", "Gilgit", "GB", "Baltistan"],
+  "Indian Occupied Kashmir": ["Occupied Kashmir", "IOK", "Azad Jammu and Kashmir", "Kashmir"],
+};
+
 const countries = meta.locations.map((l) => ({
   t: l.area === "Aggregate" ? "region" : "country",
   n: l.name,
@@ -29,7 +36,7 @@ const countries = meta.locations.map((l) => ({
   s: l.area === "Aggregate" ? "World and regions" : l.region || l.area,
   a: aliases[l.code] ?? [],
 }));
-const districts = pk.units.map((u) => ({ t: "district", n: u.name, d: slug(u.name), s: `${u.province}${u.kind === "new" ? ", new district" : ""}` }));
+const districts = pk.units.map((u) => ({ t: "district", n: u.name, d: slug(u.name), s: `${u.province}${u.kind === "new" ? ", new district" : ""}`, a: PROVINCE_ALIASES[u.province] ?? [] }));
 const tehsils = pk.units.flatMap((u) => u.tehsils.filter((t) => t.toLowerCase() !== u.name.toLowerCase()).map((t) => ({ t: "tehsil", n: t, d: slug(u.name), s: `Tehsil in ${u.name} district` })));
 
 const out = { countries, districts, tehsils };
