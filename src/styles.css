@@ -11,6 +11,7 @@
   --highlight: #e2a93a;
   --gain: #2d7a5a;
   --loss: #b8472e;
+  --warn: #b45309;
   --sans: "Times New Roman", Times, "Liberation Serif", "Nimbus Roman", Tinos, serif;
   --serif: "Times New Roman", Times, "Liberation Serif", "Nimbus Roman", Tinos, serif;
   color-scheme: light dark;
@@ -29,6 +30,7 @@
     --highlight: #d9a843;
     --gain: #5dbb8f;
     --loss: #e5805f;
+    --warn: #e0a44a;
   }
 }
 :root[data-theme="dark"] {
@@ -44,6 +46,7 @@
   --highlight: #d9a843;
   --gain: #5dbb8f;
   --loss: #e5805f;
+  --warn: #e0a44a;
 }
 
 *,

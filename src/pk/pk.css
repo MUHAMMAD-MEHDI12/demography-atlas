@@ -55,6 +55,42 @@
   background: var(--land);
   font-size: 13.5px;
 }
+.kind-note.is-off {
+  border-left-color: var(--warn, #b45309);
+  background: color-mix(in srgb, var(--warn, #b45309) 9%, transparent);
+}
+
+/* Provenance badge for areas outside the PBS census 2023 tables (GB, AJ&K, disputed). */
+.k-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--land);
+  color: var(--ink-2);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  vertical-align: middle;
+  white-space: nowrap;
+  cursor: help;
+}
+.k-tag.is-off {
+  border-color: color-mix(in srgb, var(--warn, #b45309) 55%, transparent);
+  background: color-mix(in srgb, var(--warn, #b45309) 12%, transparent);
+  color: color-mix(in srgb, var(--warn, #b45309) 75%, var(--ink));
+}
+
+/* Source line appended to map tooltips for off-census areas. */
+.tip-note {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  line-height: 1.35;
+}
 .pk-select {
   min-height: 34px;
   padding: 0 8px;

@@ -17,6 +17,35 @@ const int = (v: number | null) => (v === null || !Number.isFinite(v) ? "no data"
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const GROUPS = 16;
 
+/** Areas outside the PBS Census 2023 district tables, and the short label used for each. */
+const KIND_LABEL: Partial<Record<District["kind"], string>> = {
+  gb: "GB, not in census 2023",
+  ajk: "AJ&K, not in census 2023",
+  iok: "disputed, no data",
+  new: "new district",
+  reduced: "reduced district",
+  merged: "merged district",
+};
+
+/** True when the area's figures are not from the PBS Census 2023 district tables. */
+const isOffCensus = (u: District) => u.kind === "gb" || u.kind === "ajk" || u.kind === "iok";
+
+/** Short badge shown next to a district name, or an empty string for ordinary census districts. */
+const kindBadge = (u: District) => {
+  const label = KIND_LABEL[u.kind];
+  if (!label) return "";
+  const tip = isOffCensus(u) ? (u.note ?? "Not part of the PBS Census 2023 district tables.") : label;
+  return ` <small class="k-tag${isOffCensus(u) ? " is-off" : ""}" title="${esc(tip)}">${esc(label)}</small>`;
+};
+
+/** One-line provenance for tooltips and compact surfaces. */
+const shortNote = (u: District) => {
+  if (u.kind === "gb") return "Population and area: GB Planning & Development Department. Age structure: US Census Bureau, Census 2017.";
+  if (u.kind === "ajk") return "AJ&K Bureau of Statistics, AJ&K at a Glance 2023. Age structure: US Census Bureau, Census 2017.";
+  if (u.kind === "iok") return "No source with comparable figures is published for this area.";
+  return "";
+};
+
 async function loadWorld(): Promise<WorldData> {
   if (window.__WORLD__) return window.__WORLD__;
   const res = await fetch(`${import.meta.env.BASE_URL}data/world.json`);
@@ -364,6 +393,7 @@ class PakistanApp {
     const text = [a.note, a.source ? `Source: ${a.source}.` : ""].filter(Boolean).join(" ");
     note.hidden = !text;
     note.textContent = text;
+    note.classList.toggle("is-off", isOffCensus(a));
     $("tehsils").textContent = a.tehsils.join(", ");
     $("tehsil-title").textContent = `Tehsils of ${a.name}`;
   }
@@ -385,7 +415,7 @@ class PakistanApp {
       .map((u) => {
         const w = Math.max((Math.abs(value(u, this.indicator)) / max) * 100, 0.5);
         const cls = [u.id === this.primary.id ? "is-sel" : "", u.id === this.compare?.id ? "is-cmp" : "", value(u, this.indicator) < 0 ? "is-neg" : ""].join(" ");
-        return `<li class="${cls}"><button type="button" data-id="${u.id}"><span class="rk-name">${esc(u.name)}${u.kind === "new" ? ' <small>new</small>' : ""}</span><span class="rk-bar"><i style="width:${w.toFixed(1)}%"></i></span><span class="rk-val">${f(u)}</span></button></li>`;
+        return `<li class="${cls}"><button type="button" data-id="${u.id}"><span class="rk-name">${esc(u.name)}${kindBadge(u)}</span><span class="rk-bar"><i style="width:${w.toFixed(1)}%"></i></span><span class="rk-val">${f(u)}</span></button></li>`;
       })
       .join("");
     // scroll only the list, not the whole panel
@@ -400,10 +430,10 @@ class PakistanApp {
     for (const btn of document.querySelectorAll<HTMLButtonElement>("#details [role=tab]")) btn.setAttribute("aria-selected", String(btn.dataset.tab === this.detailsTab));
     const body = $("details-body");
     if (this.detailsTab === "district") {
-      $("details-sub").textContent = `${u.name}, ${u.province}, ${u.popLabel ?? "Census 2023"}`;
+      $("details-sub").textContent = `${u.name}, ${u.province}, ${isOffCensus(u) ? `not in the PBS census 2023 tables; age structure from Census ${u.ageYear ?? 2017}` : u.popLabel ?? "Census 2023"}`;
       if (!u.age) {
         const factsOnly: [string, string][] = [["Population", int(u.population)], ["Area (km²)", int(u.area)], ["People per km²", u.density === null ? "no data" : fmt(u.density, 1)], ["Population in 2017", int(u.pop2017)]];
-        body.innerHTML = `<h3 class="d-title">${esc(u.name)}</h3><p class="muted d-sub">${esc(u.note ?? "")}</p>
+        body.innerHTML = `<h3 class="d-title">${esc(u.name)}${kindBadge(u)}</h3><p class="muted d-sub">${esc(u.note ?? "")}</p>
           <div class="table-wrap"><table class="d-table"><tbody>${factsOnly.map(([k, v]) => `<tr><th scope="row">${k}</th><td class="num">${v}</td></tr>`).join("")}</tbody></table></div>
           <p class="muted d-sub" style="margin-top:14px">No age or sex table is published for this area, so the age charts are empty.</p>`;
         this.csv = { name: `${slug(u.name)}.csv`, rows: [["Indicator", "Value"], ...factsOnly.map(([k, v]) => [k, v.replace(/,/g, "")])] };
@@ -431,14 +461,14 @@ class PakistanApp {
         ["Urban", int(u.urban)], ["Rural", int(u.rural)], ["Area (km²)", int(u.area)], ["People per km²", u.density === null ? "no data" : fmt(u.density, 1)],
         ["Males per 100 females", u.sexRatio === null ? "no data" : fmt(u.sexRatio, 2)], ["Population in 2017", int(u.pop2017)], ["Growth per year, 2017–2023 (%)", u.growth === null ? "no data" : fmt(u.growth, 2)],
       ];
-      body.innerHTML = `<h3 class="d-title">${esc(u.name)}</h3>${u.note ? `<p class="muted d-sub">${esc(u.note)}</p>` : ""}
+      body.innerHTML = `<h3 class="d-title">${esc(u.name)}${kindBadge(u)}</h3>${u.note ? `<p class="muted d-sub">${esc(u.note)}</p>` : ""}
         <div class="table-wrap"><table class="d-table"><tbody>${facts.map(([k, v]) => `<tr><th scope="row">${k}</th><td class="num">${v}</td></tr>`).join("")}</tbody></table></div>
         <h3 class="d-title" style="margin-top:18px">Population by age and sex${broad ? " (broad age groups)" : ""}</h3>
         <p class="muted d-sub">Share of each area's population, in per cent (males and females together add up to 100)</p>
         <div class="table-wrap"><table class="d-table"><thead><tr><th scope="col" rowspan="2">Age</th><th scope="col" colspan="4" class="num">All residents</th><th scope="col" colspan="2" class="num">Urban</th><th scope="col" colspan="2" class="num">Rural</th></tr>
         <tr><th scope="col" colspan="2" class="num">Male</th><th scope="col" colspan="2" class="num">Female</th><th scope="col" class="num">Male</th><th scope="col" class="num">Female</th><th scope="col" class="num">Male</th><th scope="col" class="num">Female</th></tr></thead><tbody>${rows}</tbody><tfoot>${tfoot}</tfoot></table></div>`;
       this.csv = {
-        name: `${slug(u.name)}-census-2023.csv`,
+        name: `${slug(u.name)}-${isOffCensus(u) ? (u.ageYear ?? 2017) : "census-2023"}.csv`,
         rows: [
           ["Indicator", "Value"], ...facts.map(([k, v]) => [k, v.replace(/,/g, "")]), [],
           ["Age", "All male %", "All female %", "Urban male %", "Urban female %", "Rural male %", "Rural female %"],
@@ -726,6 +756,8 @@ class PakistanApp {
     const lines = [`<strong>${row.arm}</strong>`, `Aged ${age}`, `Male ${pct(m)}, female ${pct(f)}`];
     if (this.compare?.age?.detail === "5-year" && u.age.detail === "5-year") lines.push(`${esc(this.compare.name)}: male ${pct(row.cLeft)}, female ${pct(row.cRight)}`);
     if (u.age[reg].total === 0) lines.push("No population in this area");
+    const note = shortNote(u);
+    if (note) lines.push(`<span class="tip-note">${esc(note)}</span>`);
     tip.innerHTML = lines.map((l) => `<span>${l}</span>`).join("");
     tip.hidden = false;
     const stage = $("stage").getBoundingClientRect();
@@ -748,7 +780,7 @@ class PakistanApp {
         const li = document.createElement("li");
         const b = document.createElement("button");
         b.type = "button";
-        const tag = u.kind === "new" ? " <small>new district</small>" : u.kind === "iok" ? " <small>disputed</small>" : "";
+        const tag = kindBadge(u);
         b.innerHTML = `<span>${esc(u.name)}${tag}</span><small>${esc(u.division || u.province)}</small>`;
         b.addEventListener("click", () => {
           $<HTMLDialogElement>("picker").close();
