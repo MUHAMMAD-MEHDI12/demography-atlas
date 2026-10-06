@@ -12,6 +12,8 @@ import { YearPicker } from "./yearpicker";
 import { SearchBox, searchMarkup } from "./search";
 import { Tour, tourMarkup } from "./tour";
 import { initTheme } from "./theme";
+import tzJson from "./tz.json";
+import { utmZone, localClock } from "./time";
 
 declare global {
   interface Window {
@@ -23,6 +25,26 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const PLAY_SPEED = 4; // years per second
 const CURRENT_YEAR = 2023; // last UN WPP 2024 estimate year (2024+ are projections)
+
+/** UN country/area code -> IANA time zone of the country's centre (scripts/build-tz.mjs). */
+const TIMEZONES: Record<string, string> = tzJson;
+
+/** Countries spanning several zones: show the zone people expect (the capital's), not the centre's. */
+const CAPITAL_TIMEZONES: Record<string, string> = {
+  "36": "Australia/Sydney", // Australia
+  "76": "America/Sao_Paulo", // Brazil
+  "124": "America/Toronto", // Canada
+  "180": "Africa/Kinshasa", // DR Congo
+  "296": "Pacific/Tarawa", // Kiribati
+  "360": "Asia/Jakarta", // Indonesia
+  "643": "Europe/Moscow", // Russia
+  "840": "America/New_York", // United States
+};
+
+/** Time zone to show for a place: capital override, then centre-of-country, then UTC. */
+function zoneFor(code: number | string, key: string): string {
+  return CAPITAL_TIMEZONES[String(code)] ?? TIMEZONES[key] ?? "UTC";
+}
 
 /** GDP per capita (USD, 2025, World Bank API: NY.GDP.PCAP.CD). Key = ISO 3166-1 numeric code. */
 const GDP_PER_CAPITA: Record<number, number> = {
@@ -182,6 +204,8 @@ class App {
     // start with bars growing from zero
     this.data.profile(this.primary.index, this.year, this.target);
     this.updatePlace(false);
+    this.tickWhere();
+    setInterval(() => this.tickWhere(), 1000);
     $("status").hidden = true;
     document.body.classList.add("is-ready");
   }
@@ -220,8 +244,23 @@ class App {
     $("legend-cmp-name").textContent = this.compare?.name ?? "";
     document.title = "HumanScape";
     this.map.select(p.code, this.compare?.code ?? null, (code) => this.members(code), animate && !reducedMotion.matches, stay, this.flightMs);
+    this.updateWhere();
     this.statsKey = "";
     this.kick();
+  }
+
+  /** Live clock and UTM zone follow the selected place. */
+  private updateWhere() {
+    const key = String(this.primary.code);
+    const c = this.places[key]?.c;
+    $("where-time").dataset.tz = zoneFor(this.primary.code, key); // aggregates (world, continents) fall back to UTC
+    $("where-utm").textContent = `UTM ${utmZone(c?.[0] ?? NaN, c?.[1] ?? NaN)}`;
+    this.tickWhere();
+  }
+
+  private tickWhere() {
+    const el = $("where-time");
+    el.textContent = localClock(el.dataset.tz || "UTC");
   }
 
   private members(code: number): number[] {

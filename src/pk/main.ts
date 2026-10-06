@@ -8,6 +8,7 @@ import { SITE, initSiteTabs } from "../site";
 import { SearchBox, searchMarkup } from "../search";
 import { Tour, tourMarkup } from "../tour";
 import { initTheme } from "../theme";
+import { localClock, utmZone } from "../time";
 import { loadPakistan, shapes, breaks, classOf, ramp, value, valueAtYear, breaksFrom, INDICATORS, type District, type Indicator, type PakistanData } from "./data";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -217,6 +218,21 @@ class PakistanApp {
     this.resize();
     this.update(false);
     $("status").hidden = true;
+    this.tickWhere();
+    setInterval(() => this.tickWhere(), 1000);
+  }
+
+  /** Live clock and UTM zone follow the selected district. */
+  private updateWhere() {
+    const c = this.primary.center;
+    $("where-time").dataset.tz = "Asia/Karachi";
+    $("where-utm").textContent = `UTM ${utmZone(c?.[0] ?? NaN, c?.[1] ?? NaN)}`;
+    this.tickWhere();
+  }
+
+  private tickWhere() {
+    const el = $("where-time");
+    el.textContent = localClock(el.dataset.tz || "Asia/Karachi");
   }
 
   // ---------- state -------------------------------------------------------------------
@@ -238,6 +254,7 @@ class PakistanApp {
     $("place-name").textContent = p.name;
     $("place-region").textContent = p.division ? `${p.division} division, ${p.province}` : p.province;
     $("recenter-name").textContent = p.name;
+    this.updateWhere();
     $("compare-btn").textContent = c ? `vs ${c.name}` : "Compare";
     $("compare-btn").classList.toggle("is-on", !!c);
     $("compare-clear").hidden = !c;
