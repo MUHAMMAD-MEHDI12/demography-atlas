@@ -133,7 +133,7 @@ class App {
       } else {
         this.motion.snap(x, y);
         this.glyph.setAnchor(x, y);
-        this.yearPicker?.place(x, y + this.glyph.pickerOffset);
+        this.placeYearPicker(x, y + this.glyph.pickerOffset);
       }
       $("recenter").hidden = !offHome;
     }, undefined, extras);
@@ -308,7 +308,7 @@ class App {
       this.glyph.setMotion(this.motion.tilt, this.motion.lift);
     }
     this.glyph.set(profileArms(this.shown), this.compare ? profileArms(this.cmpShown) : null);
-    this.yearPicker.place(this.glyph.cx, this.glyph.cy + this.glyph.pickerOffset);
+    this.placeYearPicker(this.glyph.cx, this.glyph.cy + this.glyph.pickerOffset);
     this.glyph.setProjection(this.yearShown > this.data.lastEstimate + 0.5);
     this.updateTime();
 
@@ -695,6 +695,20 @@ class App {
       { passive: false },
     );
     stage.addEventListener("dblclick", (e) => e.preventDefault());
+  }
+
+  /** Place the year picker under the chart, keeping it fully inside the stage (phones can be tight). */
+  private placeYearPicker(x: number, y: number) {
+    if (!this.yearPicker) return;
+    const el = $("year-picker");
+    const stage = $("stage");
+    const legend = stage.querySelector(".legend") as HTMLElement | null;
+    const pw = el.offsetWidth, ph = el.offsetHeight;
+    const w = stage.clientWidth, h = stage.clientHeight;
+    const limit = (legend?.offsetTop ?? h) - 6; // never cover the legend
+    const cx = Math.min(Math.max(x, pw / 2 + 8), Math.max(pw / 2 + 8, w - pw / 2 - 8));
+    const cy = Math.min(Math.max(y, 8), Math.max(8, limit - ph));
+    this.yearPicker.place(cx, cy);
   }
 
   private resize() {

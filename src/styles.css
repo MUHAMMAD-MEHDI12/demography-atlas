@@ -360,41 +360,30 @@ button {
   text-shadow: 0 0 4px var(--ocean);
 }
 /* ---------- live time and UTM zone of the selected place -------------------- */
-.where {
+.place-where {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 6px;
-  padding: 3px 9px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--panel);
-  box-shadow: 0 4px 14px -10px rgb(10 30 40 / 0.5);
+  margin-top: 3px;
   font-size: 12.5px;
   line-height: 1.2;
   color: var(--ink-2);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 4px var(--ocean);
 }
-.where-time {
+.pw-time {
   font-weight: 600;
   letter-spacing: 0.03em;
   color: var(--ink);
 }
-.where-utm {
+.pw-utm {
   padding-left: 8px;
   border-left: 1px solid var(--border);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-@media (max-width: 620px) {
-  .where {
-    font-size: 11.5px;
-    padding: 2px 7px;
-    gap: 6px;
-  }
 }
 /* ---------- search ------------------------------------------------------------ */
 .search {
@@ -562,15 +551,49 @@ button {
   white-space: nowrap;
 }
 @media (max-width: 620px) {
+  /* phones: three tight rows keep the map, chart and year picker all on screen */
+  .head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "brand actions"
+      "place place"
+      "search search";
+    align-items: center;
+    gap: 6px 10px;
+  }
+  .brand {
+    grid-area: brand;
+  }
+  .brand-name {
+    display: none; /* the globe keeps the brand on a phone */
+  }
   .head-actions {
-    flex-direction: column;
-    align-items: flex-end;
+    grid-area: actions;
+    margin-top: 0;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  .head .place {
+    grid-area: place;
+  }
+  .search {
+    grid-area: search;
+    margin-top: 0;
   }
   .section-link,
   .compare-btn,
   .compare-clear {
     min-height: 32px;
-    font-size: 14px;
+    padding: 0 10px;
+    font-size: 13.5px;
+  }
+  .place-name {
+    font-size: clamp(22px, 7vw, 30px);
+  }
+  .place-where {
+    font-size: 11.5px;
+    gap: 6px;
   }
 }
 /* ---------- light / dark switch ------------------------------------------------ */
@@ -896,7 +919,7 @@ button {
   position: absolute;
   left: 12px;
   right: 12px;
-  bottom: 8px;
+  bottom: max(8px, env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-wrap: wrap;
   gap: 4px 14px;
@@ -936,7 +959,7 @@ button {
     clip: rect(0 0 0 0);
   }
   .recenter {
-    bottom: 56px;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   }
 }
 @media (max-width: 620px) {

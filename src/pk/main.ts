@@ -328,7 +328,14 @@ class PakistanApp {
 
   private placeBadge() {
     const b = $("census-badge");
-    b.style.transform = `translate(${(this.glyph.cx - b.offsetWidth / 2).toFixed(1)}px, ${(this.glyph.cy + this.glyph.pickerOffset).toFixed(1)}px)`;
+    const stage = $("stage");
+    const bw = b.offsetWidth, bh = b.offsetHeight;
+    const w = stage.clientWidth, h = stage.clientHeight;
+    const x = Math.min(Math.max(this.glyph.cx, bw / 2 + 8), Math.max(bw / 2 + 8, w - bw / 2 - 8));
+    const legend = stage.querySelector(".legend") as HTMLElement | null;
+    const limit = (legend?.offsetTop ?? h) - 6;
+    const y = Math.min(Math.max(this.glyph.cy + this.glyph.pickerOffset, 8), Math.max(8, limit - bh));
+    b.style.transform = `translate(${(x - bw / 2).toFixed(1)}px, ${y.toFixed(1)}px)`;
   }
 
   private resize() {
