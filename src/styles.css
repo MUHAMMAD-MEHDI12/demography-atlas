@@ -554,12 +554,43 @@ button {
   background: var(--panel);
   color: var(--ink);
 }
-.theme-btn svg {
+.theme-btn svg,
+.fs-btn svg {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.fs-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+.fs-btn:hover { box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12); }
+.fs-btn:active { transform: scale(0.985); }
+.fs-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.fs-btn .fs-enter { display: block; }
+.fs-btn .fs-exit { display: none; }
+.fs-btn[aria-pressed="true"] .fs-enter { display: none; }
+.fs-btn[aria-pressed="true"] .fs-exit { display: block; }
+
+:fullscreen .app,
+:-webkit-full-screen .app,
+:fullscreen .stage,
+:-webkit-full-screen .stage {
+  height: 100dvh;
 }
 @media (max-width: 620px) {
   .theme-btn {

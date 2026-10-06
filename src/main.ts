@@ -759,3 +759,23 @@ Promise.all([Dataset.load(), loadWorld(), loadPkGeo()])
     $("status").textContent = `${err.message} Reload the page to try again.`;
     console.error(err);
   });
+
+const fsBtn = document.getElementById('fs-btn') as HTMLButtonElement | null;
+if (fsBtn) {
+  const updateFS = () => {
+    const active = document.fullscreenElement != null;
+    fsBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    fsBtn.title = active ? 'Exit full screen' : 'Toggle full screen';
+    fsBtn.setAttribute('aria-label', active ? 'Exit full screen' : 'Toggle full screen');
+  };
+  fsBtn.innerHTML = `<svg class="fs-enter" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9V4h5M4 15v5h5M20 9V4h-5M20 15v5h-5"/></svg><svg class="fs-exit" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>`;
+  fsBtn.addEventListener('click', () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  });
+  document.addEventListener('fullscreenchange', updateFS);
+  updateFS();
+}
