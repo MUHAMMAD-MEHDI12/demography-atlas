@@ -318,10 +318,11 @@ class PakistanApp {
     const stage = $("stage");
     const { width, height } = stage.getBoundingClientRect();
     if (!width || !height) return;
-    const headH = (stage.querySelector(".head") as HTMLElement).offsetHeight;
+    const headH = (stage.querySelector(".head") as HTMLElement | null)?.offsetHeight ?? 0;
     stage.style.setProperty("--head-h", `${headH}px`);
-    const legend = stage.querySelector(".legend") as HTMLElement;
-    this.glyph.resize(width, height, headH, height - legend.offsetTop + 6, $("census-badge").offsetHeight);
+    const legend = stage.querySelector(".legend") as HTMLElement | null;
+    const legendTop = legend?.offsetTop ?? height - 96;
+    this.glyph.resize(width, height, headH, height - legendTop + 6, ($("census-badge") as HTMLElement | null)?.offsetHeight ?? 0);
     this.map.resize(width, height, this.glyph.homeX, this.glyph.homeY, this.glyph.lensRadius);
     this.kick();
   }

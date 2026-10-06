@@ -662,11 +662,12 @@ class App {
     const stage = $("stage");
     const { width, height } = stage.getBoundingClientRect();
     if (!width || !height) return;
-    const headH = ($("stage").querySelector(".head") as HTMLElement).offsetHeight;
+    const headH = (stage.querySelector(".head") as HTMLElement | null)?.offsetHeight ?? 0;
     stage.style.setProperty("--head-h", `${headH}px`);
-    const legend = stage.querySelector(".legend") as HTMLElement;
-    const bottomH = height - legend.offsetTop + 6;
-    this.glyph.resize(width, height, headH, bottomH, $("year-picker").offsetHeight);
+    const legend = stage.querySelector(".legend") as HTMLElement | null;
+    const legendTop = legend?.offsetTop ?? height - 96;
+    const bottomH = height - legendTop + 6;
+    this.glyph.resize(width, height, headH, bottomH, ($("year-picker") as HTMLElement | null)?.offsetHeight ?? 0);
     this.map.resize(width, height, this.glyph.homeX, this.glyph.homeY, this.glyph.lensRadius);
     this.kick();
   }
